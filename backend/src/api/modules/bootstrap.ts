@@ -1,0 +1,76 @@
+import { BaseModel } from "./base-model";
+import Company from "./companies/model";
+import CompanyRepository from "./companies/repository";
+import UserController from "./users/controller";
+import User from "./users/model";
+import UserRepository from "./users/repository";
+import UserService from "./users/service";
+import CompanyService, { ICompanyService, ICompanyServiceRepo } from "./companies/service";
+import CompanyController from "./companies/controller";
+import EmployeeRepository from "./employees/repository";
+import EmployeeService, { IEmployeeServiceRepo } from "./employees/service";
+import EmployeeController from "./employees/controller";
+import Employee from "./employees/model";
+import { ICompany } from "./companies/types";
+import CredentialRepository from "./credentials/repository";
+import Credential from "./credentials/model";
+import { ICredential } from "./credentials/types";
+import CredentialService, { ICredentialService } from "./credentials/service";
+import CredentialController from "./credentials/controller";
+import RoleRepository from "./roles/repository";
+import Role from "./roles/model";
+import RoleService from "./roles/service";
+import RoleController from "./roles/controller";
+import PermissionRepository from "./permissions/repository";
+import Permission from "./permissions/model";
+import PermissionService from "./permissions/service";
+import PermissionController from "./permissions/controller";
+import ProviderRepository from "./providers/repository";
+import ProviderService from "./providers/service";
+import Provider from "./providers/model";
+import ProviderController from "./providers/controller";
+import Product from "./products/model";
+import ProductRepository from "./products/repository";
+import ProductService from "./products/service";
+import ProductController from "./products/controller";
+
+
+// Credential
+export const credentialRepository = new CredentialRepository(Credential as unknown as BaseModel<ICredential>);
+export const credentialService = new CredentialService(credentialRepository);
+export const credentialController = new CredentialController(credentialService);
+
+// Users
+export const userRepository = new UserRepository(User);
+export const userService = new UserService(userRepository);
+export const userController = new UserController(userService);
+
+// Roles
+export const roleRepository = new RoleRepository(Role);
+export const roleService = new RoleService(roleRepository);
+export const roleController = new RoleController(roleService);
+
+// Roles
+export const permissionRepository = new PermissionRepository(Permission);
+export const permissionService = new PermissionService(permissionRepository);
+export const permissionController = new PermissionController(permissionService);
+
+// Company
+export const companyRepository = new CompanyRepository(Company as unknown as BaseModel<ICompany>);
+export const companyService = new CompanyService(companyRepository as unknown as ICompanyServiceRepo);
+export const companyController = new CompanyController(companyService as ICompanyService);
+
+// Employee
+export const employeeRepository = new EmployeeRepository(Employee);
+export const employeeService = new EmployeeService(employeeRepository as unknown as IEmployeeServiceRepo);
+export const employeeController = new EmployeeController(employeeService);
+
+//Providers
+export const providerRepository = new ProviderRepository(Provider);
+export const providerService = new ProviderService(providerRepository);
+export const providerController = new ProviderController(providerService);
+
+//Products
+export const productRepository = new ProductRepository(Product);
+export const productService = new ProductService(productRepository);
+export const productController = new ProductController(productService);
