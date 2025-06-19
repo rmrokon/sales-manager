@@ -35,19 +35,19 @@ Company.init(
       allowNull: true
     },    
     createdAt: {
-      field: 'created_at',
+      columnName: 'created_at',
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
     updatedAt: {
-      field: 'updated_at',
+      columnName: 'updated_at',
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
     deletedAt: {
-      field: 'deleted_at',
+      columnName: 'deleted_at',
       type: DataTypes.DATE,
       allowNull: true
     },

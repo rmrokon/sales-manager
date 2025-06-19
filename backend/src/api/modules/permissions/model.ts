@@ -20,13 +20,13 @@ Permission.init(
       allowNull: false,
     },
     createdAt: {
-      field: 'created_at',
+      columnName: 'created_at',
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
     updatedAt: {
-      field: 'updated_at',
+      columnName: 'updated_at',
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,

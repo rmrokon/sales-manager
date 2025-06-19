@@ -1,0 +1,57 @@
+import { z } from 'zod';
+import { InvoiceType } from './model';
+
+export const InvoiceCreationValidationSchema = z.object({
+  type: z.enum([InvoiceType.COMPANY, InvoiceType.ZONE], {
+    required_error: 'Invoice type is required',
+    invalid_type_error: 'Invoice type must be either "company" or "zone"'
+  }),
+  fromUserId: z.string({required_error: 'Sender user ID is required'}),
+  toCompanyId: z.string().optional(),
+  toZoneId: z.string().optional(),
+  totalAmount: z.number({required_error: 'Total amount is required'})
+    .min(0, 'Total amount cannot be negative'),
+  paidAmount: z.number({required_error: 'Paid amount is required'})
+    .min(0, 'Paid amount cannot be negative')
+    .default(0),
+  dueAmount: z.number({required_error: 'Due amount is required'})
+    .min(0, 'Due amount cannot be negative')
+}).refine(data => {
+  // Ensure either toCompanyId or toZoneId is provided based on type
+  if (data.type === InvoiceType.COMPANY && !data.toCompanyId) {
+    return false;
+  }
+  if (data.type === InvoiceType.ZONE && !data.toZoneId) {
+    return false;
+  }
+  return true;
+}, {
+  message: 'Company invoice must have toCompanyId, Zone invoice must have toZoneId',
+  path: ['type']
+}).refine(data => {
+  // Ensure dueAmount = totalAmount - paidAmount
+  return data.dueAmount === data.totalAmount - data.paidAmount;
+}, {
+  message: 'Due amount must equal total amount minus paid amount',
+  path: ['dueAmount']
+});
+
+export const InvoiceUpdateValidationSchema = z.object({
+  paidAmount: z.number()
+    .min(0, 'Paid amount cannot be negative')
+    .optional(),
+  dueAmount: z.number()
+    .min(0, 'Due amount cannot be negative')
+    .optional(),
+}).refine(data => {
+  // If both paidAmount and dueAmount are provided, they should be consistent
+  if (data.paidAmount !== undefined && data.dueAmount !== undefined) {
+    // We can't validate against totalAmount here since we don't have it
+    // This will be handled in the service layer
+    return true;
+  }
+  return true;
+}, {
+  message: 'Due amount must be consistent with paid amount',
+  path: ['dueAmount']
+});

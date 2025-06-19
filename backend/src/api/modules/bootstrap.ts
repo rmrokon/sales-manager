@@ -33,7 +33,30 @@ import Product from "./products/model";
 import ProductRepository from "./products/repository";
 import ProductService from "./products/service";
 import ProductController from "./products/controller";
-
+import Zone from './zones/model';
+import ZoneRepository from './zones/repository';
+import ZoneService from './zones/service';
+import ZoneController from './zones/controller';
+import Payment from './payments/model';
+import PaymentRepository from './payments/repository';
+import PaymentService from './payments/service';
+import PaymentController from './payments/controller';
+import Discount from './discounts/model';
+import DiscountRepository from './discounts/repository';
+import DiscountService from './discounts/service';
+import DiscountController from './discounts/controller';
+import Inventory from './inventory/model';
+import InventoryRepository from './inventory/repository';
+import InventoryService from './inventory/service';
+import InventoryController from './inventory/controller';
+import Invoice from './invoices/model';
+import InvoiceRepository from './invoices/repository';
+import InvoiceService from './invoices/service';
+import InvoiceController from './invoices/controller';
+import InvoiceItem from './invoice-items/model';
+import InvoiceItemRepository from './invoice-items/repository';
+import InvoiceItemService from './invoice-items/service';
+import InvoiceItemController from './invoice-items/controller';
 
 // Credential
 export const credentialRepository = new CredentialRepository(Credential as unknown as BaseModel<ICredential>);
@@ -74,3 +97,27 @@ export const providerController = new ProviderController(providerService);
 export const productRepository = new ProductRepository(Product);
 export const productService = new ProductService(productRepository);
 export const productController = new ProductController(productService);
+
+export const zoneRepository = new ZoneRepository(Zone);
+export const zoneService = new ZoneService(zoneRepository);
+export const zoneController = new ZoneController(zoneService);
+
+export const paymentRepository = new PaymentRepository(Payment);
+export const paymentService = new PaymentService(paymentRepository);
+export const paymentController = new PaymentController(paymentService);
+
+export const discountRepository = new DiscountRepository(Discount);
+export const discountService = new DiscountService(discountRepository);
+export const discountController = new DiscountController(discountService);
+
+export const inventoryRepository = new InventoryRepository(Inventory);
+export const inventoryService = new InventoryService(inventoryRepository);
+export const inventoryController = new InventoryController(inventoryService);
+
+export const invoiceRepository = new InvoiceRepository(Invoice);
+export const invoiceService = new InvoiceService(invoiceRepository);
+export const invoiceController = new InvoiceController(invoiceService);
+
+export const invoiceItemRepository = new InvoiceItemRepository(InvoiceItem);
+export const invoiceItemService = new InvoiceItemService(invoiceItemRepository, invoiceService);
+export const invoiceItemController = new InvoiceItemController(invoiceItemService);
