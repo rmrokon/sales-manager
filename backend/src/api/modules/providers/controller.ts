@@ -12,6 +12,7 @@ export default class ProviderController {
   }
 
   findProviders = async (req: Request, res: Response) => {
+    console.log('findProviders called with auth:', req?.auth);
     const companies = await this._service.findProviders({
       company_id: req?.auth?.cid,
     });

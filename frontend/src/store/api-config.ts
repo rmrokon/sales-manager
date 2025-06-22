@@ -69,7 +69,9 @@ import {
       "role",
       "refresh",
       "tags",
-      "channel"
+      "channel",
+      "provider",
+      "product"
     ],
     endpoints: (builder) => ({
       getMe: builder.query({

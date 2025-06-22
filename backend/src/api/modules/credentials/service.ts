@@ -39,7 +39,7 @@ export interface ICredentialService {
   refreshCredential(args: Pick<ILoginCredentialRequestBody, 'email'>): Promise<{
     accessToken: string;
     refreshToken: string;
-    user: IDataValues<IUser>;
+    user: IUser;
     company?: Company;
     employeeId?: string;
     roles: Role[] | undefined;
@@ -198,10 +198,10 @@ export default class CredentialService implements ICredentialService {
         companies = await (user as User).getCompanies!();
       }
       if(roles?.map((role) => role.name).includes(DefaultRoles.Employee)){
-        employee = await (user as User).getEmployee!();
+        employee = await user.getEmployee();
       }
-      const credential = await (user as User).getCredential?.();
-      const isPasswordValid = await this.verifyPassword(args.password, credential!.dataValues.password);
+      const credential = await user.getCredential();
+      const isPasswordValid = await this.verifyPassword(args.password, credential.dataValues.password);
       if (!isPasswordValid) throw new BadRequest('Invalid credentials');
       const permissionsPromises = await Promise.allSettled(
         roles!.map(async (role) => (await role.getPermissions())),
@@ -241,6 +241,7 @@ export default class CredentialService implements ICredentialService {
           company: defaultCompany, 
         }
     } catch (err) {
+      console.log(err);
       await t.rollback();
       return Promise.reject(err);
     }
@@ -265,11 +266,12 @@ export default class CredentialService implements ICredentialService {
     const t = await sequelize.startUnmanagedTransaction();
     try {
       const user = await userService.findUserByRaw({ email: args.email });
-      const redisRecord = await redisClient.get(user?.dataValues?.id!);
+      if(!user) throw new BadRequest('User not found!');
+      const redisRecord = await redisClient.get(user?.id!);
       const parsedData = JSON.parse(redisRecord ?? '{}');
-      const credential = await (user as User).getCredential?.();
+      const credential = await user?.getCredential?.();
       const company = parsedData?.company as Company;
-      const roles = await (user as User).getRoles?.();
+      const roles = await user?.getRoles?.();
       const permissionsPromises = await Promise.allSettled(
         roles!.map((role) => (role as Role).getPermissions?.()),
       );
@@ -279,14 +281,14 @@ export default class CredentialService implements ICredentialService {
         .flat();
         let employee = null;
         if(roles?.map((role) => role.name).includes(DefaultRoles.Employee)){
-          employee = await (user as User).getEmployee!();
+          employee = await user?.getEmployee!();
         }
       await t.commit();
       const tokens = await this.createTokens({
         payload: {
-          uid: user?.dataValues.id!,
-          cid: company?.id,
-          user: user?.dataValues,
+          uid: user?.id!,
+          cid: company?.id, 
+          user: user!,
           roles,
           permissions: permissions,
           company: company,

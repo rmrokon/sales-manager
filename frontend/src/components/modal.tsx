@@ -1,19 +1,21 @@
 import { PropsWithChildren, ReactElement } from "react";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
+import { useDialog } from "@/hooks/use-dialog";
 
 interface ModalProps {
     trigger: ReactElement;
     title?: string;
     description?: string;
+    // open?: boolean;
+    // onOpenChange?: (open: boolean) => void;
 }
 
 export default function Modal({trigger, title, description, children}: PropsWithChildren<ModalProps>){
-    return <Dialog>
-    <DialogTrigger>{trigger}</DialogTrigger>
+  const {isOpen, setIsOpen} = useDialog();
+    return <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <DialogTrigger asChild>{trigger}</DialogTrigger>
     <DialogContent>
       <DialogHeader>
-    <DialogClose>Close</DialogClose>
-
         {title && <DialogTitle>{title}</DialogTitle>}
         {description && <DialogDescription>
           {description}

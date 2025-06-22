@@ -1,5 +1,5 @@
 "use client"
-import { Building2, Calendar, ChevronDown, ChevronUp, Home, Inbox, Moon, MoreHorizontal, Plus, Search, Settings, Sun, User2 } from "lucide-react"
+import { Building2, Calendar, ChevronUp, Home, Inbox, Moon, MoreHorizontal, Package, Plus, Search, Settings, Sun, Truck, User2 } from "lucide-react"
 import {
     Sidebar,
     SidebarContent,
@@ -71,25 +71,35 @@ const items = [
         url: "#",
         icon: Settings,
     },
+    {
+        title: "Providers",
+        url: "/providers",
+        icon: Truck,
+    },
+    {
+        title: "Products",
+        url: "/products",
+        icon: Package,
+    },
 ]
 
 export default function AppSidebar() {
     const { open } = useSidebar();
     const theme = useSelector((state: RootState) => state.theme.theme);
-    const {company, user} = useSelector((state: RootState) => state.auth);
+    const { company, user } = useSelector((state: RootState) => state.auth);
     const dispatch = useDispatch();
-    const handleChangeTheme = (themeInput: ThemeState["theme"])=>{
+    const handleChangeTheme = (themeInput: ThemeState["theme"]) => {
         localStorage.setItem('theme', themeInput);
         dispatch(changeTheme(themeInput));
-        if(themeInput === 'dark' && theme === 'light'){
+        if (themeInput === 'dark' && theme === 'light') {
             document.body.classList.add('dark');
         }
-        else if(themeInput === 'light' && theme === 'dark' ) {
+        else if (themeInput === 'light' && theme === 'dark') {
             document.body.classList.remove('dark');
         }
     }
 
-    const handleSignOut = ()=>{
+    const handleSignOut = () => {
         localStorage.removeItem('accessToken');
         dispatch(setAuthUser({}));
     }

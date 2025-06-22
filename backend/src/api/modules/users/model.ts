@@ -5,6 +5,7 @@ import Employee from '../employees/model';
 import Role from '../roles/model';
 import Credential from '../credentials/model';
 import { ICompany } from '../companies/types';
+import { HasOneGetAssociationMixin } from 'sequelize';
 
 export default class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
   declare id: CreationOptional<string>;
@@ -13,9 +14,9 @@ export default class User extends Model<InferAttributes<User>, InferCreationAttr
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
   declare getCompanies: HasManyGetAssociationsMixin<Company>;
-  getEmployee: ((options?: IncludeOptions) => Promise<Employee>) | undefined;
-  getRoles: ((options?: IncludeOptions) => Promise<Role[]>) | undefined;
-  getCredential: ((options?: IncludeOptions) => Promise<Credential>) | undefined;
+  declare getEmployee: HasOneGetAssociationMixin<Employee>;
+  declare getRoles: HasManyGetAssociationsMixin<Role>;
+  declare getCredential: HasOneGetAssociationMixin<Credential>;
 }
 
 User.init(

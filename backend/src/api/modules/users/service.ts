@@ -70,7 +70,7 @@ export default class UserService implements IUserService {
 
   async findUserByRaw(query: Record<string, unknown>, options?: { t: Transaction }) {
     const user = await this._repo.findOne(query, options);
-    return user as IDataValues<IUser>;
+    return user;
   }
 
   async findUserBy(query: Record<string, unknown>, options?: { t: Transaction }) {

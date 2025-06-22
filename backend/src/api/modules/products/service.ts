@@ -29,19 +29,41 @@ export default class ProductService implements IProductService {
     };
   }
 
-  async createProduct(body: IProductRequestBody & { company_id?: string; user_id?: string }) {
+  async createProduct(body: IProductRequestBody & { company_id?: string; user_id?: string; providerIds?: string[] }) {
     const record = await sequelize.transaction(async (t) => {
       const record = await this._repo.create(body, { t });
       if (!record) throw new InternalServerError('Create product failed');
+      
+      // Associate providers if providerIds are provided
+      if (body.providerIds && body.providerIds.length > 0) {
+        await record.setProviders(body.providerIds, { transaction: t });
+      }
+      
       return record as IDataValues<IProduct>;
     });
     return this.convertToJson(record) as IProduct;
   }
 
-  async updateProduct(query: Partial<IProduct>, body: IProductRequestBody) {
-    const record = await this._repo.update(query, body);
-    if (!record) throw new InternalServerError('Update product failed');
-    return this.convertToJson(record as IDataValues<IProduct>) as IProduct;
+  async updateProduct(
+    query: Partial<IProduct>,
+    body: IProductRequestBody & { providerIds?: string[] },
+  ) {
+    const record = await sequelize.transaction(async (t) => {
+      const updatedProduct = await this._repo.update(query, body, { t });
+      if (!updatedProduct) throw new InternalServerError('Update product failed');
+      
+      // Get the product record
+      const product = await this._repo.findOne(query, { t });
+      if (!product) throw new InternalServerError('Product not found after update');
+      
+      // Update provider associations if providerIds are provided
+      if (body.providerIds !== undefined) {
+        await product.setProviders(body.providerIds, { transaction: t });
+      }
+      
+      return product as IDataValues<IProduct>;
+    });
+    return this.convertToJson(record) as IProduct;
   }
 
   async deleteProduct(query: Partial<IProduct>) {

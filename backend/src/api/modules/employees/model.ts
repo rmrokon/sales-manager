@@ -59,7 +59,7 @@ Employee.init(
   },
 );
 
-  User.hasOne(Employee, {
+User.hasOne(Employee, {
   foreignKey: {
     name: 'user_id',
     onDelete: 'CASCADE',

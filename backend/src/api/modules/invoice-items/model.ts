@@ -100,7 +100,8 @@ Invoice.hasMany(InvoiceItem, {
 InvoiceItem.belongsTo(Invoice, {
   foreignKey: {
     name: 'invoiceId',
-    field: 'invoice_id'
+    field: 'invoice_id',
+    onDelete: 'CASCADE'
   }
 });
 

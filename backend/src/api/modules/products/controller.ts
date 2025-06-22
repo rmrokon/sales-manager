@@ -12,10 +12,11 @@ export default class ProductController {
   }
 
   findProducts = async (req: Request, res: Response) => {
-    const companies = await this._service.findProducts({
+    const products = await this._service.findProducts({
       company_id: req?.auth?.cid,
+      include: ['providers'] // Include providers in the response
     });
-    return SuccessResponses(req, res, companies, {
+    return SuccessResponses(req, res, products, {
       statusCode: 200,
     });
   };

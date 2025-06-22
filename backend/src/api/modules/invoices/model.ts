@@ -40,7 +40,7 @@ Invoice.init(
       type: DataTypes.UUID,
       allowNull: false,
       references: {
-        model: 'users',
+        model: User,
         key: 'id'
       }
     },
@@ -49,7 +49,7 @@ Invoice.init(
       type: DataTypes.UUID,
       allowNull: true,
       references: {
-        model: 'companies',
+        model: Company,
         key: 'id'
       }
     },
@@ -58,7 +58,7 @@ Invoice.init(
       type: DataTypes.UUID,
       allowNull: true,
       references: {
-        model: 'zones',
+        model: Zone,
         key: 'id'
       }
     },

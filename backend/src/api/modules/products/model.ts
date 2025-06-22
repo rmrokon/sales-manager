@@ -1,6 +1,7 @@
-import { CreationOptional, DataTypes, InferAttributes, InferCreationAttributes, Model } from '@sequelize/core';
+import { BelongsToManySetAssociationsMixin, CreationOptional, DataTypes, InferAttributes, InferCreationAttributes, Model } from '@sequelize/core';
 import { sequelize } from '../../../configs';
 import Provider from '../providers/model';
+import Company from '../companies/model';
 
 export default class Product extends Model<InferAttributes<Product>, InferCreationAttributes<Product>> {
   declare id: CreationOptional<string>;
@@ -8,6 +9,7 @@ export default class Product extends Model<InferAttributes<Product>, InferCreati
   declare company_id?: CreationOptional<string>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
+  declare setProviders: BelongsToManySetAssociationsMixin<Provider, Provider["id"]>;
 }
 
 Product.init(
@@ -66,3 +68,18 @@ Product.belongsToMany(Provider, {
 });
 
 
+Company.hasMany(Product, {
+  foreignKey: {
+    name: 'company_id',
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+  },
+});
+
+Product.belongsTo(Company, {
+  foreignKey: {
+    name: 'company_id',
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+  },
+});
