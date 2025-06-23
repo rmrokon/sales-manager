@@ -14,6 +14,7 @@ export interface IInvoiceItemService {
   createInvoiceItem(body: IInvoiceItemCreationBody): Promise<IInvoiceItem>;
   findInvoiceItemById(id: string): Promise<IInvoiceItem | null>;
   findInvoiceItemsByInvoiceId(invoiceId: string): Promise<IInvoiceItem[]>;
+  // createInvoiceItemInBulk(body: IInvoiceItemCreationBody[], transaction?: Transaction): Promise<IInvoiceItem[]>
 }
 
 export default class InvoiceItemService implements IInvoiceItemService {
@@ -32,17 +33,23 @@ export default class InvoiceItemService implements IInvoiceItemService {
     };
   }
 
-  async createInvoiceItem(body: IInvoiceItemCreationBody) {
-    return await sequelize.transaction(async (t) => {
+  async createInvoiceItem(body: IInvoiceItemCreationBody, transaction?: Transaction) {
+    const t = transaction || await sequelize.startUnmanagedTransaction();
+    
+    try {
       // Create the invoice item
-      const record = await this._repo.create(body, { t });
+      const record = await this._repo.create(body, { t: transaction });
       if (!record) throw new InternalServerError('Create invoice item failed');
       
-      // Update the invoice total
-      await this._updateInvoiceTotal(body.invoiceId, t);
+      // If we started the transaction here, commit it
+      if (!transaction) await t.commit();
       
-      return record as IDataValues<IInvoiceItem>;
-    }).then(record => this.convertToJson(record) as IInvoiceItem);
+      return this.convertToJson(record) as IInvoiceItem;
+    } catch (error) {
+      // If we started the transaction here, roll it back
+      if (!transaction) await t.rollback();
+      throw error;
+    }
   }
 
   async updateInvoiceItem(id: string, body: IInvoiceItemUpdateBody) {
@@ -129,5 +136,17 @@ export default class InvoiceItemService implements IInvoiceItemService {
       totalAmount,
       dueAmount
     }, { transaction: t });
+  }
+
+  async createInvoiceItemInBulk(body: IInvoiceItemCreationBody[], transaction?: Transaction){
+    const t = transaction || await sequelize.startUnmanagedTransaction();
+    try{
+      const records = await this._repo.bulkCreate(body);
+      await t.commit();
+      return records;
+    }catch(err){
+      await t.rollback();
+      return err;
+    }
   }
 }

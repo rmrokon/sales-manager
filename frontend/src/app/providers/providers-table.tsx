@@ -7,19 +7,20 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Delete, Edit } from "lucide-react"
+import { Delete } from "lucide-react"
 import { useGetProvidersQuery, useDeleteProviderMutation } from "@/store/services/provider"
 import { IProvider } from "@/utils/types/provider"
 import { useToast } from "@/hooks/use-toast"
 import { isRtkQueryError } from "@/lib/utils"
 import EditProviderDialog from "./edit-provider-dialog"
+import { Spinner } from "@/components/ui/spinner"
 
 export default function ProvidersTable() {
     const { data, isLoading } = useGetProvidersQuery({});
     const [deleteProvider] = useDeleteProviderMutation();
     const { toast } = useToast();
 
-    if(isLoading) return <h3>Loading...</h3>;
+    if(isLoading) return <Spinner />;
 
     const handleDelete = async (id: string) => {
         if (confirm("Are you sure you want to delete this provider?")) {

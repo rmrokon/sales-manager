@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { ProductBodyValidationSchema } from './validations';
 import { Attributes, CreationAttributes } from '@sequelize/core';
-import Provider from './model';
 import Product from './model';
 
 export interface IProduct extends Attributes<Product>{};

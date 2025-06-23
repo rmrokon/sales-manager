@@ -18,6 +18,7 @@ import { ErrorMessage } from "@/components/ui/error"
 import { useLoginMutation } from "@/store/services/api.auth"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
+import { Spinner } from "./ui/spinner"
 
 const LoginSchema = z.object({
     email: z.string().email(),
@@ -54,7 +55,7 @@ export function LoginForm({
           }
       };
   console.log("inside login form", errors);
-  if(isLoading) return <h3>Loading...</h3>;
+  if(isLoading) return <Spinner />;
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>

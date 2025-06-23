@@ -1,13 +1,15 @@
 import { z } from 'zod';
-import { InvoiceType } from './model';
+import { InvoiceType } from './types';
+import { BulkInvoiceItemCreationValidationSchema } from '../invoice-items/validations';
 
 export const InvoiceCreationValidationSchema = z.object({
-  type: z.enum([InvoiceType.COMPANY, InvoiceType.ZONE], {
+  type: z.enum([InvoiceType.PROVIDER, InvoiceType.ZONE], {
     required_error: 'Invoice type is required',
     invalid_type_error: 'Invoice type must be either "company" or "zone"'
   }),
   fromUserId: z.string({required_error: 'Sender user ID is required'}),
-  toCompanyId: z.string().optional(),
+  toProviderId: z.string().optional(),
+  company_id: z.string().optional(),
   toZoneId: z.string().optional(),
   totalAmount: z.number({required_error: 'Total amount is required'})
     .min(0, 'Total amount cannot be negative'),
@@ -15,10 +17,11 @@ export const InvoiceCreationValidationSchema = z.object({
     .min(0, 'Paid amount cannot be negative')
     .default(0),
   dueAmount: z.number({required_error: 'Due amount is required'})
-    .min(0, 'Due amount cannot be negative')
+    .min(0, 'Due amount cannot be negative'),
+  items: BulkInvoiceItemCreationValidationSchema.optional()
 }).refine(data => {
   // Ensure either toCompanyId or toZoneId is provided based on type
-  if (data.type === InvoiceType.COMPANY && !data.toCompanyId) {
+  if (data.type === InvoiceType.PROVIDER && !data.toProviderId) {
     return false;
   }
   if (data.type === InvoiceType.ZONE && !data.toZoneId) {
@@ -26,7 +29,7 @@ export const InvoiceCreationValidationSchema = z.object({
   }
   return true;
 }, {
-  message: 'Company invoice must have toCompanyId, Zone invoice must have toZoneId',
+  message: 'Provider invoice must have toProviderId, Zone invoice must have toZoneId',
   path: ['type']
 }).refine(data => {
   // Ensure dueAmount = totalAmount - paidAmount

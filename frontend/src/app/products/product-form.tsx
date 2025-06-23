@@ -17,6 +17,7 @@ import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
+import { Spinner } from "@/components/ui/spinner";
 
 const productSchema = z.object({
     name: z.string().nonempty({ message: 'Product name is required' }),
@@ -118,7 +119,7 @@ export default function ProductForm({ defaultValues, onSuccess }: ProductFormPro
         }
     };
     
-    if (isLoading) return <h3>Loading...</h3>;
+    if (isLoading) return <Spinner />;
     console.log({selectedProviders})
     return (
         <form className="grid gap-6" onSubmit={handleSubmit(handleSaveProduct)}>

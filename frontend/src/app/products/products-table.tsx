@@ -13,13 +13,14 @@ import { IProduct } from "@/utils/types/product"
 import { useToast } from "@/hooks/use-toast"
 import { isRtkQueryError } from "@/lib/utils"
 import EditProductDialog from "./edit-product-dialog"
+import { Spinner } from "@/components/ui/spinner"
 
 export default function ProductsTable() {
     const { data, isLoading } = useGetProductsQuery({});
     const [deleteProduct] = useDeleteProductMutation();
     const { toast } = useToast();
 
-    if(isLoading) return <h3>Loading...</h3>;
+    if(isLoading) return <Spinner />;
 
     const handleDelete = async (id: string) => {
         if (confirm("Are you sure you want to delete this product?")) {

@@ -7,6 +7,10 @@ import User from '../users/model';
 import Company from '../companies/model';
 import Zone from '../zones/model';
 import Payment from '../payments/model';
+import Provider from '../providers/model';
+import { invoiceItemService } from '../bootstrap';
+import { includes } from 'lodash';
+import InvoiceItem from '../invoice-items/model';
 
 export interface IInvoiceService {
   findInvoices(query: Record<string, unknown>): Promise<IInvoice[]>;
@@ -15,6 +19,7 @@ export interface IInvoiceService {
   createInvoice(body: IInvoiceCreationBody): Promise<IInvoice>;
   findInvoiceById(id: string): Promise<IInvoice | null>;
   recordPayment(invoiceId: string, amount: number): Promise<IInvoice>;
+  findInvoiceWithItems(id: string): Promise<IInvoice | null>;
 }
 
 export default class InvoiceService implements IInvoiceService {
@@ -32,11 +37,27 @@ export default class InvoiceService implements IInvoiceService {
   }
 
   async createInvoice(body: IInvoiceCreationBody) {
+    const { items, ...invoiceData } = body;
+    
     const record = await sequelize.transaction(async (t) => {
-      const record = await this._repo.create(body, { t });
-      if (!record) throw new InternalServerError('Create invoice failed');
-      return record as IDataValues<IInvoice>;
+      try{
+         // Create the invoice
+      const invoice = await this._repo.create(invoiceData, { t });
+      if (!invoice) throw new InternalServerError('Create invoice failed');
+      
+      // If there are items, create them
+      if(items?.length){
+        const payload = items.map(item => ({...item, invoiceId: invoice.id}));
+        await invoiceItemService.createInvoiceItemInBulk(payload, t);
+      }
+      
+      return invoice as IDataValues<IInvoice>;
+      }catch(err){
+        await t.rollback();
+        throw err;
+      }
     });
+    
     return this.convertToJson(record) as IInvoice;
   }
 
@@ -74,8 +95,7 @@ export default class InvoiceService implements IInvoiceService {
     const records = await this._repo.find(query, {
       ...options,
       include: [
-        { model: User, as: 'Sender' },
-        { model: Company, as: 'ReceiverCompany' },
+        { model: Provider, as: 'ReceiverProvider' },
         { model: Zone, as: 'ReceiverZone' }
       ]
     });
@@ -124,5 +144,25 @@ export default class InvoiceService implements IInvoiceService {
       
       return this.convertToJson(updatedInvoice as IDataValues<IInvoice>) as IInvoice;
     });
+  }
+
+  async findInvoiceWithItems(id: string) {
+    const invoice = await this._repo.find({id}, {
+      include: [
+        { model: Provider, as: 'ReceiverProvider' },
+        { model: Zone, as: 'ReceiverZone' },
+        {model: InvoiceItem}
+      ]
+    });
+    if (!invoice) return null;
+    
+    // Get the invoice items
+    // const items = await invoice.getInvoiceItems({
+    //   include: [{ model: Product }]
+    // });
+    
+    // const invoiceData = this.convertToJson(invoice as IDataValues<IInvoice>);
+    
+    return invoice[0];
   }
 }

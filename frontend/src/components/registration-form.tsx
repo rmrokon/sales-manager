@@ -18,6 +18,7 @@ import { useState } from "react"
 import { useRegisterMutation } from "@/store/services/api.auth"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
+import { Spinner } from "./ui/spinner"
 
 const RegistrationSchema = z.object({
   email: z.string({ required_error: "Required" }).email(),
@@ -92,7 +93,7 @@ export function RegistrationForm({
   const handleRegistrationTypeChange = (type: RegType) => {
     setRegType(type);
   }
-  if(isLoading) return <h3>Loading...</h3>
+  if(isLoading) return <Spinner />;
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>

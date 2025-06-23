@@ -5,7 +5,7 @@ import Company from '../companies/model';
 
 export default class Discount extends Model<InferAttributes<Discount>, InferCreationAttributes<Discount>> {
   declare id: CreationOptional<string>;
-  declare productId: string;
+  declare productId?: string;
   declare companyId: string;
   declare percent: number;
   declare validFrom: Date;

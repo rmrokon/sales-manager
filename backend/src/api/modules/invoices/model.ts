@@ -3,18 +3,16 @@ import { sequelize } from '../../../configs';
 import User from '../users/model';
 import Company from '../companies/model';
 import Zone from '../zones/model';
-
-export enum InvoiceType {
-  COMPANY = 'company',
-  ZONE = 'zone'
-}
+import Provider from '../providers/model';
+import { InvoiceType } from './types';
 
 export default class Invoice extends Model<InferAttributes<Invoice>, InferCreationAttributes<Invoice>> {
   declare id: CreationOptional<string>;
   declare type: InvoiceType;
   declare fromUserId: string;
-  declare toCompanyId: CreationOptional<string>;
-  declare toZoneId: CreationOptional<string>;
+  declare toProviderId: CreationOptional<string>;
+  declare toZoneId?: CreationOptional<string>;
+  declare company_id?: CreationOptional<string>;
   declare totalAmount: number;
   declare paidAmount: number;
   declare dueAmount: number;
@@ -44,12 +42,12 @@ Invoice.init(
         key: 'id'
       }
     },
-    toCompanyId: {
-      field: 'to_company_id',
+    toProviderId: {
+      field: 'to_provider_id',
       type: DataTypes.UUID,
       allowNull: true,
       references: {
-        model: Company,
+        model: Provider,
         key: 'id'
       }
     },
@@ -100,8 +98,8 @@ Invoice.init(
     hooks: {
       beforeValidate: (invoice: Invoice) => {
         // Ensure either toCompanyId or toZoneId is set based on type
-        if (invoice.type === InvoiceType.COMPANY && !invoice.toCompanyId) {
-          throw new Error('Company invoice must have a toCompanyId');
+        if (invoice.type === InvoiceType.PROVIDER && !invoice.toProviderId) {
+          throw new Error('Provider invoice must have a toProviderId');
         }
         if (invoice.type === InvoiceType.ZONE && !invoice.toZoneId) {
           throw new Error('Zone invoice must have a toZoneId');
@@ -112,36 +110,37 @@ Invoice.init(
 );
 
 // Set up associations
-User.hasMany(Invoice, {
-  foreignKey: {
-    name: 'fromUserId',
-    field: 'from_user_id'
-  },
-  as: 'SentInvoices'
-});
-
-Invoice.belongsTo(User, {
-  foreignKey: {
-    name: 'fromUserId',
-    field: 'from_user_id'
-  },
-  as: 'Sender'
-});
 
 Company.hasMany(Invoice, {
   foreignKey: {
-    name: 'toCompanyId',
-    field: 'to_company_id'
+    name: 'company_id',
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE'
   },
-  as: 'ReceivedInvoices'
 });
 
 Invoice.belongsTo(Company, {
   foreignKey: {
-    name: 'toCompanyId',
-    field: 'to_company_id'
+    name: 'company_id',
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE'
   },
-  as: 'ReceiverCompany'
+});
+
+Provider.hasMany(Invoice, {
+  foreignKey: {
+    name: 'toProviderId',
+    field: 'to_provider_id'
+  },
+  as: 'ReceivedInvoices'
+});
+
+Invoice.belongsTo(Provider, {
+  foreignKey: {
+    name: 'toProviderId',
+    field: 'to_provider_id'
+  },
+  as: 'ReceiverProvider'
 });
 
 Zone.hasMany(Invoice, {

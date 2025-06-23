@@ -1,5 +1,5 @@
 "use client"
-import { Building2, Calendar, ChevronUp, Home, Inbox, Moon, MoreHorizontal, Package, Plus, Search, Settings, Sun, Truck, User2 } from "lucide-react"
+import { Building2, Calendar, ChevronUp, Home, Inbox, Moon, MoreHorizontal, Package, Plus, Receipt, Search, Settings, Sun, Truck, User2 } from "lucide-react"
 import {
     Sidebar,
     SidebarContent,
@@ -22,6 +22,7 @@ import { RootState } from "@/store/store";
 import { changeTheme, ThemeState } from "@/store/reducers/theme.reducer";
 import { useEffect } from "react";
 import { setAuthUser } from "@/store/reducers/auth.reducer";
+import { usePathname } from "next/navigation";
 // import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 
 const dropDown = <DropdownMenu>
@@ -46,40 +47,47 @@ const items = [
         title: "Home",
         url: "#",
         icon: Home,
+        actionBtn: <></>,
+        dropDown: <></>,
     },
-    {
-        title: "Channels",
-        url: "/channels",
-        icon: Inbox,
-        actionBtn: <SidebarMenuAction>
-            <Plus /> <span className="sr-only">Add Project</span>
-        </SidebarMenuAction>
-    },
-    {
-        title: "employees",
-        url: "/employees",
-        icon: Calendar,
-        dropDown: dropDown
-    },
-    {
-        title: "companies",
-        url: "/companies",
-        icon: Search,
-    },
-    {
-        title: "Settings",
-        url: "#",
-        icon: Settings,
-    },
+    // {
+    //     title: "employees",
+    //     url: "/employees",
+    //     icon: Calendar,
+    //     dropDown: dropDown
+    // },
+    // {
+    //     title: "companies",
+    //     url: "/companies",
+    //     icon: Search,
+    // },
     {
         title: "Providers",
         url: "/providers",
         icon: Truck,
+        actionBtn: <></>,
+        dropDown: <></>,
     },
     {
         title: "Products",
         url: "/products",
         icon: Package,
+        actionBtn: <></>,
+        dropDown: <></>,
+    },
+    {
+        title: "Invoices",
+        url: "/invoices",
+        icon: Receipt,
+        actionBtn: <></>,
+        dropDown: <></>,
+    },
+    {
+        title: "Settings",
+        url: "#",
+        icon: Settings,
+        actionBtn: <></>,
+        dropDown: <></>,
     },
 ]
 
@@ -87,6 +95,7 @@ export default function AppSidebar() {
     const { open } = useSidebar();
     const theme = useSelector((state: RootState) => state.theme.theme);
     const { company, user } = useSelector((state: RootState) => state.auth);
+    const pathname = usePathname();
     const dispatch = useDispatch();
     const handleChangeTheme = (themeInput: ThemeState["theme"]) => {
         localStorage.setItem('theme', themeInput);
@@ -152,7 +161,7 @@ export default function AppSidebar() {
                         <SidebarMenu>
                             {items.map((item) => (
                                 <SidebarMenuItem key={item.title}>
-                                    <SidebarMenuButton asChild isActive={item?.title === 'Home'}>
+                                    <SidebarMenuButton asChild isActive={pathname === item.url || pathname.startsWith(item.url + '/')}>
                                         <a href={item.url}>
                                             <item.icon />
                                             <span>{item.title}</span>

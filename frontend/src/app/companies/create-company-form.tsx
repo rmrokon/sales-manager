@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ErrorMessage } from "@/components/ui/error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
 import { isRtkQueryError } from "@/lib/utils";
 import { useCreateCompanyMutation } from "@/store/services/company";
@@ -41,7 +42,7 @@ export default function CreateCompanyForm() {
                     router.replace('/companies');
                 }
     };
-    if(isLoading) return <h3>Loading...</h3>;
+    if(isLoading) return <Spinner />;
     return <form className="grid gap-6" onSubmit={handleSubmit(handleCreateChannel)}>
         <div className="grid gap-2">
             <Label htmlFor="name">Name</Label>

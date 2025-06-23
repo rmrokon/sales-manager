@@ -10,11 +10,12 @@ import { Button } from "@/components/ui/button"
 import { Delete } from "lucide-react"
 import { useGetCompaniesQuery } from "@/store/services/company"
 import { ICompany } from "@/utils/types/company"
+import { Spinner } from "@/components/ui/spinner"
 
 
 export default function CompaniesTable() {
     const {data, isLoading} = useGetCompaniesQuery({});
-    if(isLoading) return <h3>Loading...</h3>;
+    if(isLoading) return <Spinner />;
     return (
         <Table>
             {/* <TableCaption>A list of your recent invoices.</TableCaption> */}

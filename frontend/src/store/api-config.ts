@@ -71,7 +71,9 @@ import {
       "tags",
       "channel",
       "provider",
-      "product"
+      "product",
+      "invoice",
+      "zone",
     ],
     endpoints: (builder) => ({
       getMe: builder.query({

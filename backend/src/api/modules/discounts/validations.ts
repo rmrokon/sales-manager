@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const DiscountCreationValidationSchema = z.object({
-  productId: z.string({required_error: 'Product ID is required'}),
+  productId: z.string().optional(),
   companyId: z.string({required_error: 'Company ID is required'}),
   percent: z.number({required_error: 'Discount percentage is required'})
     .min(0, 'Percentage must be between 0 and 100')

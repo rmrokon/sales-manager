@@ -11,7 +11,7 @@ export default class InvoiceController {
   }
 
   findInvoices = async (req: Request, res: Response) => {
-    const invoices = await this._service.findInvoices(req.query as Record<string, unknown>);
+    const invoices = await this._service.findInvoices({...req.query, company_id: req.auth?.cid} as Record<string, unknown>);
     return SuccessResponses(req, res, invoices, {
       statusCode: 200,
     });
@@ -30,9 +30,22 @@ export default class InvoiceController {
     });
   };
 
+  findInvoiceWithItems = async (req: Request, res: Response) => {
+    const { invoiceId } = req.params;
+    const invoice = await this._service.findInvoiceWithItems(invoiceId);
+    
+    if (!invoice) {
+      throw new BadRequest('Invoice not found');
+    }
+    
+    return SuccessResponses(req, res, invoice, {
+      statusCode: 200,
+    });
+  };
+
   createInvoice = async (req: Request, res: Response) => {
     const body = req.body as IInvoiceCreationBody;
-    const invoice = await this._service.createInvoice(body);
+    const invoice = await this._service.createInvoice({...body, company_id: req.auth?.cid});
     return SuccessResponses(req, res, invoice, {
       statusCode: 201,
     });

@@ -32,3 +32,6 @@ InvoiceRouter.route('/:invoiceId/payments')
     [isAuthenticated],
     asyncCatchHandler(invoiceController.recordPayment),
   );
+
+InvoiceRouter.route('/:invoiceId/with-items')
+  .get([isAuthenticated], asyncCatchHandler(invoiceController.findInvoiceWithItems));
