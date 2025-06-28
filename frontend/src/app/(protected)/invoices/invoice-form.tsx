@@ -231,7 +231,7 @@ export default function InvoiceForm({ defaultValues, onSuccess }: InvoiceFormPro
                   <SelectValue placeholder="Select a zone" />
                 </SelectTrigger>
                 <SelectContent>
-                  {zonesData?.result.map((zone) => (
+                  {zonesData?.map((zone) => (
                     <SelectItem key={zone.id} value={zone.id}>
                       {zone.name}
                     </SelectItem>

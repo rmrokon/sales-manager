@@ -1,4 +1,4 @@
-import { Transaction } from '@sequelize/core';
+import { Op, Transaction } from '@sequelize/core';
 import { IDataValues, InternalServerError } from '../../../utils';
 import { IInvoice, IInvoiceCreationBody, IInvoiceUpdateBody } from './types';
 import { sequelize } from '../../../configs';
@@ -11,9 +11,11 @@ import Provider from '../providers/model';
 import { invoiceItemService } from '../bootstrap';
 import { includes } from 'lodash';
 import InvoiceItem from '../invoice-items/model';
+import Product from '../products/model';
 
 export interface IInvoiceService {
   findInvoices(query: Record<string, unknown>): Promise<IInvoice[]>;
+  findInvoicesWithPagination(query: Record<string, unknown>): Promise<any>;
   updateInvoice(id: string, body: IInvoiceUpdateBody): Promise<IInvoice>;
   deleteInvoice(id: string): Promise<{ success: boolean }>;
   createInvoice(body: IInvoiceCreationBody): Promise<IInvoice>;
@@ -37,10 +39,9 @@ export default class InvoiceService implements IInvoiceService {
   }
 
   async createInvoice(body: IInvoiceCreationBody) {
+    const t = await sequelize.startUnmanagedTransaction();
     const { items, ...invoiceData } = body;
-    
-    const record = await sequelize.transaction(async (t) => {
-      try{
+    try{
          // Create the invoice
       const invoice = await this._repo.create(invoiceData, { t });
       if (!invoice) throw new InternalServerError('Create invoice failed');
@@ -51,14 +52,13 @@ export default class InvoiceService implements IInvoiceService {
         await invoiceItemService.createInvoiceItemInBulk(payload, t);
       }
       
-      return invoice as IDataValues<IInvoice>;
+      await t.commit();
+      return this.convertToJson(invoice) as IInvoice;
       }catch(err){
+        console.log(err);
         await t.rollback();
         throw err;
       }
-    });
-    
-    return this.convertToJson(record) as IInvoice;
   }
 
   async updateInvoice(id: string, body: IInvoiceUpdateBody) {
@@ -101,6 +101,221 @@ export default class InvoiceService implements IInvoiceService {
     });
     return records.map((record) => this.convertToJson(record as IDataValues<IInvoice>)!);
   }
+
+  async findInvoicesWithPagination2(query: Record<string, unknown>, options?: { t: Transaction }) {
+    // Extract filter parameters
+    const { search, dateFrom, dateTo, date, type, page, limit, company_id, ...otherQuery } = query;
+
+    // Build base where conditions
+    const baseConditions: any = { ...otherQuery };
+
+    // Add type filter to base conditions
+    if (type) {
+      baseConditions.type = type;
+    }
+
+    // Build final where conditions
+    let whereConditions: any = baseConditions;
+
+    // Add search conditions
+    if (search) {
+      const searchConditions = {
+        [Op.or]: [
+          { id: { [Op.iLike]: `%${search}%` } },
+          { type: { [Op.iLike]: `%${search}%` } }
+        ]
+      };
+
+      // If we have other conditions, combine them with AND
+      if (Object.keys(baseConditions).length > 0) {
+        whereConditions = {
+          [Op.and]: [baseConditions, searchConditions]
+        };
+      } else {
+        whereConditions = searchConditions;
+      }
+    }
+
+    // Add date filtering
+    if (date) {
+      // Single date - filter for that specific day
+      const startOfDay = new Date(date as string);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date as string);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      whereConditions.createdAt = {
+        [Op.between]: [startOfDay, endOfDay]
+      };
+    } else if (dateFrom || dateTo) {
+      // Date range filtering
+      const dateFilter: any = {};
+      if (dateFrom) {
+        const startDate = new Date(dateFrom as string);
+        startDate.setHours(0, 0, 0, 0);
+        dateFilter[Op.gte] = startDate;
+      }
+      if (dateTo) {
+        const endDate = new Date(dateTo as string);
+        endDate.setHours(23, 59, 59, 999);
+        dateFilter[Op.lte] = endDate;
+      }
+      whereConditions.createdAt = dateFilter;
+    }
+
+    const result = await this._repo.findWithPagination(whereConditions, {
+      ...options,
+      include: [
+        { model: Provider, as: 'ReceiverProvider' },
+        { model: Zone, as: 'ReceiverZone' }
+      ]
+    });
+
+    return {
+      ...result,
+      nodes: result.nodes.map((record) => this.convertToJson(record as IDataValues<IInvoice>)!)
+    };
+  } // Adjust imports as needed
+
+async findInvoicesWithPagination(
+  query: Record<string, unknown>,
+  options?: { t?: Transaction }
+) {
+  const {
+    search,
+    dateFrom,
+    dateTo,
+    date,
+    type,
+    page = '1',
+    limit = '10',
+    ...restQuery
+  } = query;
+
+  // Convert pagination values to numbers
+  const pageNumber = parseInt(page as string, 10) || 1;
+  const limitNumber = parseInt(limit as string, 10) || 10;
+  const offset = (pageNumber - 1) * limitNumber;
+
+  // Build base filter conditions
+  const baseConditions: any = {};
+
+  if (type) {
+    baseConditions.type = type;
+  }
+
+  // Include any other filters (except pagination)
+  for (const [key, value] of Object.entries(restQuery)) {
+    if (value !== undefined && key !== 'page' && key !== 'limit') {
+      baseConditions[key] = value;
+    }
+  }
+
+  // Handle search
+  // let whereConditions: any = baseConditions;
+  // if (search) {
+  //   const searchConditions = {
+  //     [Op.or]: [
+  //       { id: { [Op.iLike]: `%${search}%` } },
+  //       { type: { [Op.iLike]: `%${search}%` } }
+  //     ]
+  //   };
+
+  //   whereConditions = Object.keys(baseConditions).length > 0
+  //     ? { [Op.and]: [baseConditions, searchConditions] }
+  //     : searchConditions;
+  // }
+
+  let whereConditions: any = { ...baseConditions };
+
+if (search) {
+  const orConditions = [
+    { id: { [Op.iLike]: `%${search}%` } },
+    { type: { [Op.iLike]: `%${search}%` } }
+  ];
+
+  // Combine baseConditions and search safely
+  if (Object.keys(baseConditions).length > 0) {
+    whereConditions = {
+      [Op.and]: [
+        { ...baseConditions },
+        { [Op.or]: orConditions }
+      ]
+    };
+  } else {
+    whereConditions = {
+      [Op.or]: orConditions
+    };
+  }
+}
+
+// if (search) {
+//       whereConditions[Op.or] = [
+//         {
+//           title: {
+//             [Op.iLike]: `%${search}%`,
+//           },
+//         },
+//         {
+//           type: {
+//             [Op.iLike]: `%${search}%`,
+//           },
+//         },
+//         {
+//           ReceiverZone: {
+//             name: {
+//             [Op.iLike]: `%${search}%`,
+//           },
+//           }
+//         },
+//       ];
+//     }
+
+  // Handle date filters
+  if (date) {
+    const startOfDay = new Date(date as string);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(date as string);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    whereConditions.createdAt = { [Op.between]: [startOfDay, endOfDay] };
+  } else if (dateFrom || dateTo) {
+    const dateFilter: any = {};
+    if (dateFrom) {
+      const from = new Date(dateFrom as string);
+      from.setHours(0, 0, 0, 0);
+      dateFilter[Op.gte] = from;
+    }
+    if (dateTo) {
+      const to = new Date(dateTo as string);
+      to.setHours(23, 59, 59, 999);
+      dateFilter[Op.lte] = to;
+    }
+
+    whereConditions.createdAt = dateFilter;
+  }
+  console.log({whereConditions});
+
+  // Fetch paginated result
+  const result = await this._repo.findWithPagination(whereConditions, {
+    ...options,
+    offset,
+    limit: limitNumber,
+    include: [
+      { model: Provider, as: 'ReceiverProvider' },
+      { model: Zone, as: 'ReceiverZone' }
+    ]
+  });
+
+  return {
+    ...result,
+    nodes: result.nodes.map(record =>
+      this.convertToJson(record as IDataValues<IInvoice>)!
+    )
+  };
+}
+
 
   async findInvoiceById(id: string) {
     const record = await this._repo.findById(id);
@@ -151,17 +366,10 @@ export default class InvoiceService implements IInvoiceService {
       include: [
         { model: Provider, as: 'ReceiverProvider' },
         { model: Zone, as: 'ReceiverZone' },
-        {model: InvoiceItem}
+        {model: InvoiceItem, include: [{ model: Product }]}
       ]
     });
     if (!invoice) return null;
-    
-    // Get the invoice items
-    // const items = await invoice.getInvoiceItems({
-    //   include: [{ model: Product }]
-    // });
-    
-    // const invoiceData = this.convertToJson(invoice as IDataValues<IInvoice>);
     
     return invoice[0];
   }

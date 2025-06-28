@@ -11,7 +11,25 @@ export default class InvoiceController {
   }
 
   findInvoices = async (req: Request, res: Response) => {
-    const invoices = await this._service.findInvoices({...req.query, company_id: req.auth?.cid} as Record<string, unknown>);
+    const { page, limit, ...otherQuery } = req.query;
+
+    // If pagination parameters are provided, use paginated method
+    if (page || limit) {
+      const result = await this._service.findInvoicesWithPagination({
+        ...otherQuery,
+        company_id: req.auth?.cid,
+        page: page || 1,
+        limit: limit || 10
+      } as Record<string, unknown>);
+
+      return SuccessResponses(req, res, result.nodes, {
+        statusCode: 200,
+        pagination: result.page_info
+      });
+    }
+
+    // Otherwise, return all invoices without pagination
+    const invoices = await this._service.findInvoices({...otherQuery, company_id: req.auth?.cid} as Record<string, unknown>);
     return SuccessResponses(req, res, invoices, {
       statusCode: 200,
     });

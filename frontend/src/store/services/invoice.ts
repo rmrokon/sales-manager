@@ -30,6 +30,16 @@ export const invoiceApi = storeApiConfig.injectEndpoints({
         credentials: "include",
       }),
       providesTags: ["invoice"],
+      transformResponse: (response: any) => {
+        // Handle both paginated and non-paginated responses
+        if (response.pagination) {
+          return {
+            result: response.result,
+            pagination: response.pagination
+          };
+        }
+        return { result: response.result };
+      },
     }),
 
     getInvoiceById: builder.query({

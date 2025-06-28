@@ -42,6 +42,7 @@ export interface ResponsesOptions {
   module?: ResponsesModules;
   from?: ResponsesFrom;
   actionType?: ResponsesActionsType;
+  pagination?: any;
 }
 export interface LoginFormValues {
   email: string;

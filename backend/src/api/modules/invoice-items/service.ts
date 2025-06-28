@@ -138,15 +138,17 @@ export default class InvoiceItemService implements IInvoiceItemService {
     }, { transaction: t });
   }
 
-  async createInvoiceItemInBulk(body: IInvoiceItemCreationBody[], transaction?: Transaction){
-    const t = transaction || await sequelize.startUnmanagedTransaction();
-    try{
-      const records = await this._repo.bulkCreate(body);
-      await t.commit();
+  async createInvoiceItemInBulk(body: IInvoiceItemCreationBody[], transaction?: Transaction) {
+    // Don't start a new transaction if one is provided
+    if (transaction) {
+      const records = await this._repo.bulkCreate(body, { transaction });
       return records;
-    }catch(err){
-      await t.rollback();
-      return err;
+    } else {
+      // Only manage our own transaction if none was provided
+      return await sequelize.transaction(async (t) => {
+        const records = await this._repo.bulkCreate(body, { transaction: t });
+        return records;
+      });
     }
   }
 }

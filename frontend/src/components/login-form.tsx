@@ -51,7 +51,7 @@ export function LoginForm({
               description: `${result.error.data.message}`
             });
           } else {
-            router.replace('/channels');
+            router.replace('/invoices');
           }
       };
   console.log("inside login form", errors);
