@@ -7,6 +7,7 @@ export async function SuccessResponses<TData>(req: Request, res: Response, data:
   return res.status(options?.statusCode || 200).json({
     success: true,
     result: data,
+    ...(options?.pagination ? { pagination: options.pagination } : {})
   });
 }
 

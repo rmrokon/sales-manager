@@ -1,4 +1,4 @@
-import { Transaction } from '@sequelize/core';
+import { Transaction, Op } from '@sequelize/core';
 import { IDataValues, InternalServerError } from '../../../utils';
 import { IProductRequestBody, IProduct } from './types';
 import { sequelize } from '../../../configs';
@@ -6,6 +6,7 @@ import ProductRepository from './repository';
 
 export interface IProductService {
   findProducts(query: Record<string, unknown>): Promise<IProduct[]>;
+  findProductsWithPagination(query: Record<string, unknown>): Promise<any>;
   updateProduct(
     query: Partial<IProduct>,
     body: IProductRequestBody,
@@ -75,6 +76,70 @@ export default class ProductService implements IProductService {
   async findProducts(query: Record<string, unknown>, options?: { t: Transaction }) {
     const records = await this._repo.find(query, options);
     return records.map((record) => this.convertToJson(record as IDataValues<IProduct>)!);
+  }
+
+  async findProductsWithPagination(query: Record<string, unknown>, options?: { t: Transaction }) {
+    // Extract filter parameters
+    const { search, dateFrom, dateTo, date, ...otherQuery } = query;
+
+    // Build base where conditions
+    const baseConditions: any = { ...otherQuery };
+
+    // Build final where conditions
+    let whereConditions: any = baseConditions;
+
+    // Add search conditions
+    if (search) {
+      const searchConditions = {
+        [Op.or]: [
+          { name: { [Op.iLike]: `%${search}%` } },
+          { description: { [Op.iLike]: `%${search}%` } }
+        ]
+      };
+
+      // If we have other conditions, combine them with AND
+      if (Object.keys(baseConditions).length > 0) {
+        whereConditions = {
+          [Op.and]: [baseConditions, searchConditions]
+        };
+      } else {
+        whereConditions = searchConditions;
+      }
+    }
+
+    // Add date filtering
+    if (date) {
+      // Single date - filter for that specific day
+      const startOfDay = new Date(date as string);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date as string);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      whereConditions.createdAt = {
+        [Op.between]: [startOfDay, endOfDay]
+      };
+    } else if (dateFrom || dateTo) {
+      // Date range filtering
+      const dateFilter: any = {};
+      if (dateFrom) {
+        const startDate = new Date(dateFrom as string);
+        startDate.setHours(0, 0, 0, 0);
+        dateFilter[Op.gte] = startDate;
+      }
+      if (dateTo) {
+        const endDate = new Date(dateTo as string);
+        endDate.setHours(23, 59, 59, 999);
+        dateFilter[Op.lte] = endDate;
+      }
+      whereConditions.createdAt = dateFilter;
+    }
+
+    const result = await this._repo.findWithPagination(whereConditions, options);
+
+    return {
+      ...result,
+      nodes: result.nodes.map((record) => this.convertToJson(record as IDataValues<IProduct>)!)
+    };
   }
 
   async findProductsRaw(query: Record<string, unknown>, options?: { t: Transaction }) {

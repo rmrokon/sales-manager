@@ -12,7 +12,26 @@ export default class ProductController {
   }
 
   findProducts = async (req: Request, res: Response) => {
+    const { page, limit, ...otherQuery } = req.query;
+
+    // If pagination parameters are provided, use paginated method
+    if (page || limit) {
+      const result = await this._service.findProductsWithPagination({
+        ...otherQuery,
+        company_id: req?.auth?.cid,
+        page: page || 1,
+        limit: limit || 10
+      } as Record<string, unknown>);
+
+      return SuccessResponses(req, res, result.nodes, {
+        statusCode: 200,
+        pagination: result.page_info
+      });
+    }
+
+    // Otherwise, return all products without pagination
     const products = await this._service.findProducts({
+      ...otherQuery,
       company_id: req?.auth?.cid,
       include: ['providers'] // Include providers in the response
     });

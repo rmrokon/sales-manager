@@ -1,5 +1,13 @@
 import { storeApiConfig } from "../api-config";
 
+export interface Zone {
+  id: string;
+  name: string;
+  company_id: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface ZoneCreateParams {
   name: string;
   company_id: string;
@@ -20,6 +28,15 @@ export const zoneApi = storeApiConfig.injectEndpoints({
         credentials: "include",
       }),
       providesTags: ["zone"],
+      transformResponse: (response: { data: any[] }) => {
+        return response.data.map((zone) => ({
+          id: zone.id,
+          name: zone.name,
+          company_id: zone.company_id,
+          createdAt: zone.createdAt,
+          updatedAt: zone.updatedAt,
+        }));
+      },
     }),
 
     getZoneById: builder.query({
@@ -29,6 +46,13 @@ export const zoneApi = storeApiConfig.injectEndpoints({
         credentials: "include",
       }),
       providesTags: (result, error, id) => [{ type: "zone", id }],
+      transformResponse: (response: { data: any }) => ({
+        id: response.data.id,
+        name: response.data.name,
+        company_id: response.data.company_id,
+        createdAt: response.data.createdAt,
+        updatedAt: response.data.updatedAt,
+      }),
     }),
 
     createZone: builder.mutation({
@@ -39,6 +63,13 @@ export const zoneApi = storeApiConfig.injectEndpoints({
         credentials: "include",
       }),
       invalidatesTags: ["zone"],
+      transformResponse: (response: { data: any }) => ({
+        id: response.data.id,
+        name: response.data.name,
+        company_id: response.data.company_id,
+        createdAt: response.data.createdAt,
+        updatedAt: response.data.updatedAt,
+      }),
     }),
 
     updateZone: builder.mutation({
@@ -52,6 +83,13 @@ export const zoneApi = storeApiConfig.injectEndpoints({
         "zone",
         { type: "zone", id: zoneId },
       ],
+      transformResponse: (response: { data: any }) => ({
+        id: response.data.id,
+        name: response.data.name,
+        company_id: response.data.company_id,
+        createdAt: response.data.createdAt,
+        updatedAt: response.data.updatedAt,
+      }),
     }),
 
     deleteZone: builder.mutation({

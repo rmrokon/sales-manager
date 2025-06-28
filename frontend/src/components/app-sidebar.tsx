@@ -1,5 +1,5 @@
 "use client"
-import { Building2, Calendar, ChevronUp, Home, Inbox, Moon, MoreHorizontal, Package, Plus, Receipt, Search, Settings, Sun, Truck, User2 } from "lucide-react"
+import { Banknote, Building2, ChevronUp, Home, LocateIcon, Moon, MoreHorizontal, Package, Receipt, Settings, Sun, Truck, User2 } from "lucide-react"
 import {
     Sidebar,
     SidebarContent,
@@ -25,21 +25,21 @@ import { setAuthUser } from "@/store/reducers/auth.reducer";
 import { usePathname } from "next/navigation";
 // import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 
-const dropDown = <DropdownMenu>
-    <DropdownMenuTrigger asChild>
-        <SidebarMenuAction>
-            <MoreHorizontal />
-        </SidebarMenuAction>
-    </DropdownMenuTrigger>
-    <DropdownMenuContent side="right" align="start">
-        <DropdownMenuItem>
-            <span>Edit Project</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem>
-            <span>Delete Project</span>
-        </DropdownMenuItem>
-    </DropdownMenuContent>
-</DropdownMenu>;
+// const dropDown = <DropdownMenu>
+//     <DropdownMenuTrigger asChild>
+//         <SidebarMenuAction>
+//             <MoreHorizontal />
+//         </SidebarMenuAction>
+//     </DropdownMenuTrigger>
+//     <DropdownMenuContent side="right" align="start">
+//         <DropdownMenuItem>
+//             <span>Edit Project</span>
+//         </DropdownMenuItem>
+//         <DropdownMenuItem>
+//             <span>Delete Project</span>
+//         </DropdownMenuItem>
+//     </DropdownMenuContent>
+// </DropdownMenu>;
 
 // Menu items.
 const items = [
@@ -50,17 +50,6 @@ const items = [
         actionBtn: <></>,
         dropDown: <></>,
     },
-    // {
-    //     title: "employees",
-    //     url: "/employees",
-    //     icon: Calendar,
-    //     dropDown: dropDown
-    // },
-    // {
-    //     title: "companies",
-    //     url: "/companies",
-    //     icon: Search,
-    // },
     {
         title: "Providers",
         url: "/providers",
@@ -79,6 +68,20 @@ const items = [
         title: "Invoices",
         url: "/invoices",
         icon: Receipt,
+        actionBtn: <></>,
+        dropDown: <></>,
+    },
+    {
+        title: "Zones",
+        url: "/zones",
+        icon: LocateIcon,
+        actionBtn: <></>,
+        dropDown: <></>,
+    },
+    {
+        title: "Payments",
+        url: "/payments",
+        icon: Banknote,
         actionBtn: <></>,
         dropDown: <></>,
     },

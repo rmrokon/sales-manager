@@ -15,6 +15,8 @@ import { useState } from "react"
 import { useToast } from "@/hooks/use-toast"
 import InvoiceTemplate from "../invoice-template"
 import { Spinner } from "@/components/ui/spinner"
+import InvoicePayments from "./invoice-payments";
+import CreatePaymentDialog from "@/app/(protected)/payments/create-payment-dialog";
 
 export default function InvoiceDetail() {
   const params = useParams()
@@ -78,7 +80,7 @@ export default function InvoiceDetail() {
   }
   
   const invoiceData = invoiceWithItems.result
-  const items = invoiceData.items || []
+  const items = invoiceData.invoiceItems || []
   
   const recipientName = invoiceData.type === InvoiceType.PROVIDER 
     ? invoiceData.ReceiverProvider?.name 
@@ -96,14 +98,10 @@ export default function InvoiceDetail() {
           <Printer className="mr-2 h-4 w-4" />
           Print
         </Button>,
-        <Button 
+        <CreatePaymentDialog 
           key="payment" 
-          variant="default" 
-          onClick={() => setPaymentDialogOpen(true)}
-          disabled={invoiceData.dueAmount <= 0}
-        >
-          Record Payment
-        </Button>
+          preselectedInvoiceId={invoiceId} 
+        />
       ]}
     >
       <div className="space-y-6">
@@ -150,7 +148,7 @@ export default function InvoiceDetail() {
                   <TableBody>
                     {items.map((item) => (
                       <TableRow key={item.id}>
-                        <TableCell>{item.Product?.name || 'Unknown Product'}</TableCell>
+                        <TableCell>{item.product?.name || 'Unknown Product'}</TableCell>
                         <TableCell>{item.quantity}</TableCell>
                         <TableCell>{formatCurrency(item.unitPrice)}</TableCell>
                         <TableCell>{item.discountPercent}%</TableCell>
@@ -222,6 +220,9 @@ export default function InvoiceDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <div className="mt-8">
+        <InvoicePayments invoiceId={invoiceId} />
+      </div>
     </PageLoayout>
   )
 }
