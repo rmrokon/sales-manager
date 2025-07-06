@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
 import { isRtkQueryError } from "@/lib/utils"
 import { useCreateInvoiceMutation, useUpdateInvoiceMutation } from "@/store/services/invoice"
@@ -21,6 +22,7 @@ import { useSelector } from "react-redux"
 import { z } from "zod"
 import InvoiceItemsForm from "./invoice-items-form"
 import { IProvider } from "@/utils/types/provider"
+import BillItemsForm from "./bill-items-form"
 
 const invoiceSchema = z.object({
   type: z.enum([InvoiceType.PROVIDER, InvoiceType.ZONE], {
@@ -74,8 +76,9 @@ export default function InvoiceForm({ defaultValues, onSuccess }: InvoiceFormPro
   const { toast } = useToast();
   const router = useRouter();
   
-  const [invoiceItems, setInvoiceItems] = useState<any[]>([]);
+  const [lineItems, setLineItems] = useState<any[]>([]);
   const [totalAmount, setTotalAmount] = useState(0);
+  const [isBill, setIsBill] = useState(false);
   
   const isEditing = Boolean(defaultValues?.id);
   const isLoading = isCreating || isUpdating || isLoadingProviders || isLoadingZones;
@@ -104,9 +107,12 @@ export default function InvoiceForm({ defaultValues, onSuccess }: InvoiceFormPro
   const invoiceType = watch('type');
   const paidAmount = watch('paidAmount');
   
-  // Update total amount when invoice items change
+  // Update total amount when line items change
   useEffect(() => {
-    const total = invoiceItems.reduce((sum, item) => {
+    const total = lineItems.reduce((sum, item) => {
+      if (isBill) {
+        return sum + (item.amount || 0);
+      }
       const itemTotal = item.quantity * item.unitPrice * (1 - (item.discountPercent / 100));
       return sum + itemTotal;
     }, 0);
@@ -114,7 +120,7 @@ export default function InvoiceForm({ defaultValues, onSuccess }: InvoiceFormPro
     setTotalAmount(total);
     setValue('totalAmount', total);
     setValue('dueAmount', total - (paidAmount || 0));
-  }, [invoiceItems, paidAmount, setValue]);
+  }, [lineItems, paidAmount, setValue, isBill]);
   
   // Update due amount when paid amount changes
   useEffect(() => {
@@ -136,16 +142,21 @@ export default function InvoiceForm({ defaultValues, onSuccess }: InvoiceFormPro
       } else {
         if(invoiceType === InvoiceType.PROVIDER) delete data.toZoneId
         else delete data.toProviderId
-        // Create invoice with items in a single request
+        
         const invoiceData = {
           ...data,
-          company_id: company?.id, // Add company_id from Redux state
-          items: invoiceItems.map(item => ({
+          company_id: company?.id,
+          items: isBill ? undefined : lineItems.map(item => ({
             productId: item.productId,
             quantity: item.quantity,
             unitPrice: +item.unitPrice,
             discountPercent: item.discountPercent || 0
-          }))
+          })),
+          bills: isBill ? lineItems.map(item => ({
+            title: item.title,
+            description: item.description,
+            amount: +item.amount
+          })) : undefined
         };
         
         await createInvoice(invoiceData).unwrap();
@@ -272,10 +283,19 @@ export default function InvoiceForm({ defaultValues, onSuccess }: InvoiceFormPro
         </Card>
       </div>
       
-      <InvoiceItemsForm 
-        items={invoiceItems} 
-        onChange={setInvoiceItems} 
-      />
+      <div className="flex items-center space-x-2">
+        <Switch id="is-bill-switch" checked={isBill} onCheckedChange={setIsBill} />
+        <Label htmlFor="is-bill-switch">Is Bill?</Label>
+      </div>
+      
+      {isBill ? (
+        <BillItemsForm items={lineItems} onChange={setLineItems} />
+      ) : (
+        <InvoiceItemsForm 
+          items={lineItems} 
+          onChange={setLineItems} 
+        />
+      )}
       
       <div className="flex justify-end space-x-2">
         <Button 

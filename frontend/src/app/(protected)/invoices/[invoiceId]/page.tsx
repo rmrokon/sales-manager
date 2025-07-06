@@ -5,7 +5,8 @@ import { PageLoayout } from "@/components"
 import { useGetInvoiceWithItemsQuery, useRecordPaymentMutation } from "@/store/services/invoice"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { useParams, useRouter } from "next/navigation"
-import { InvoiceType } from "@/utils/types/invoice"
+import { InvoiceType, IInvoiceItem } from "@/utils/types/invoice"
+import { IBill } from "@/utils/types/bill"
 import { Printer, ArrowLeft } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
@@ -80,7 +81,8 @@ export default function InvoiceDetail() {
   }
   
   const invoiceData = invoiceWithItems.result
-  const items = invoiceData.invoiceItems || []
+  const items: IInvoiceItem[] = invoiceData.invoiceItems || []
+  const bills: IBill[] = invoiceData.bills || []
   
   const recipientName = invoiceData.type === InvoiceType.PROVIDER 
     ? invoiceData.ReceiverProvider?.name 
@@ -106,7 +108,7 @@ export default function InvoiceDetail() {
     >
       <div className="space-y-6">
         <div className="hidden print:block">
-          <InvoiceTemplate invoice={invoiceData} items={items} />
+          <InvoiceTemplate invoice={invoiceData} items={items} bills={bills} />
         </div>
         
         <div className="print:hidden">
@@ -133,35 +135,65 @@ export default function InvoiceDetail() {
                 </div>
               </div>
               
-              <div className="mt-6">
-                <h3 className="font-semibold mb-2">Items</h3>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Quantity</TableHead>
-                      <TableHead>Unit Price</TableHead>
-                      <TableHead>Discount</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {items.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell>{item.product?.name || 'Unknown Product'}</TableCell>
-                        <TableCell>{item.quantity}</TableCell>
-                        <TableCell>{formatCurrency(item.unitPrice)}</TableCell>
-                        <TableCell>{item.discountPercent}%</TableCell>
-                        <TableCell className="text-right">
-                          {formatCurrency(
-                            item.quantity * item.unitPrice * (1 - item.discountPercent / 100)
-                          )}
-                        </TableCell>
+              {/* Show Items if they exist */}
+              {items.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="font-semibold mb-2">Items</h3>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product</TableHead>
+                        <TableHead>Quantity</TableHead>
+                        <TableHead>Unit Price</TableHead>
+                        <TableHead>Discount</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {items.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>{item.product?.name || 'Unknown Product'}</TableCell>
+                          <TableCell>{item.quantity}</TableCell>
+                          <TableCell>{formatCurrency(item.unitPrice)}</TableCell>
+                          <TableCell>{item.discountPercent}%</TableCell>
+                          <TableCell className="text-right">
+                            {formatCurrency(
+                              item.quantity * item.unitPrice * (1 - item.discountPercent / 100)
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              {/* Show Bills if they exist */}
+              {bills.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="font-semibold mb-2">Bills</h3>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {bills.map((bill) => (
+                        <TableRow key={bill.id}>
+                          <TableCell>{bill.title}</TableCell>
+                          <TableCell>{bill.description || '-'}</TableCell>
+                          <TableCell className="text-right">
+                            {formatCurrency(bill.amount)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
               
               <div className="mt-6 flex justify-end">
                 <div className="w-64">
