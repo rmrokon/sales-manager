@@ -61,6 +61,19 @@ export default class InvoiceController {
     });
   };
 
+  findInvoiceWithBills = async (req: Request, res: Response) => {
+    const { invoiceId } = req.params;
+    const invoice = await this._service.findInvoiceWithBills(invoiceId);
+
+    if (!invoice) {
+      throw new BadRequest('Invoice not found');
+    }
+
+    return SuccessResponses(req, res, invoice, {
+      statusCode: 200,
+    });
+  };
+
   createInvoice = async (req: Request, res: Response) => {
     const body = req.body as IInvoiceCreationBody;
     const invoice = await this._service.createInvoice({...body, company_id: req.auth?.cid});
@@ -96,6 +109,14 @@ export default class InvoiceController {
     
     const invoice = await this._service.recordPayment(invoiceId, amount);
     return SuccessResponses(req, res, invoice, {
+      statusCode: 200,
+    });
+  };
+
+  getEffectiveBalance = async (req: Request, res: Response) => {
+    const { invoiceId } = req.params;
+    const balance = await this._service.calculateEffectiveBalance(invoiceId);
+    return SuccessResponses(req, res, balance, {
       statusCode: 200,
     });
   };

@@ -55,17 +55,17 @@ services:
       - nwtk_sales_manager
     # command: yarn dev  # Use `yarn dev` for hot-reloading
 
-  frontend:
-    build:
-      context: ./frontend
-    container_name: sm_frontend
-    ports:
-      - '3000:3000'
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    networks:
-      - nwtk_sales_manager
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #   container_name: sm_frontend
+  #   ports:
+  #     - '3000:3000'
+  #   volumes:
+  #     - ./frontend:/app
+  #     - /app/node_modules
+  #   networks:
+  #     - nwtk_sales_manager
 
   redis:
     image: 'bitnami/redis:latest'

@@ -5,6 +5,7 @@ import Company from '../companies/model';
 import Zone from '../zones/model';
 import Provider from '../providers/model';
 import { InvoiceType } from './types';
+import Bill from '../bills/model';
 
 export default class Invoice extends Model<InferAttributes<Invoice>, InferCreationAttributes<Invoice>> {
   declare id: CreationOptional<string>;
@@ -157,4 +158,9 @@ Invoice.belongsTo(Zone, {
     field: 'to_zone_id'
   },
   as: 'ReceiverZone'
+});
+
+Invoice.hasMany(Bill, {
+  foreignKey: 'invoiceId',
+  as: 'bills'
 });

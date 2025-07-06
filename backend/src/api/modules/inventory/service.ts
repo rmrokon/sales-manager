@@ -12,6 +12,10 @@ export interface IInventoryService {
   deleteInventory(id: string): Promise<{ success: boolean }>;
   createInventory(body: IInventoryCreationBody): Promise<IInventory>;
   findInventoryById(id: string): Promise<IInventory | null>;
+  findInventoryByProduct(productId: string): Promise<IInventory[]>;
+  updateInventoryQuantity(productId: string, providerId: string, quantityChange: number, options?: { t?: Transaction }): Promise<IInventory>;
+  upsertInventory(productId: string, providerId: string, quantity: number, unitPrice: number, options?: { t?: Transaction }): Promise<IInventory>;
+  checkInventoryAvailability(productId: string, requiredQuantity: number): Promise<{ available: boolean; currentQuantity: number }>;
 }
 
 export default class InventoryService implements IInventoryService {
@@ -62,5 +66,82 @@ export default class InventoryService implements IInventoryService {
   async findInventoryById(id: string) {
     const record = await this._repo.findById(id);
     return record ? this.convertToJson(record as IDataValues<IInventory>) : null;
+  }
+
+  async findInventoryByProduct(productId: string) {
+    const records = await this._repo.find({ productId }, {
+      include: [
+        { model: Product },
+        { model: Provider }
+      ]
+    });
+    return records.map((record) => this.convertToJson(record as IDataValues<IInventory>)!);
+  }
+
+  async updateInventoryQuantity(productId: string, providerId: string, quantityChange: number, options?: { t?: Transaction }) {
+    // Find existing inventory record
+    const existingInventory = await this._repo.find({ productId, providerId }, options);
+
+    if (existingInventory.length > 0) {
+      // Update existing record
+      const current = existingInventory[0];
+      const newQuantity = current.quantity + quantityChange;
+
+      if (newQuantity < 0) {
+        throw new InternalServerError(`Insufficient inventory. Available: ${current.quantity}, Required: ${Math.abs(quantityChange)}`);
+      }
+
+      const updated = await this._repo.update(
+        { id: current.id },
+        { quantity: newQuantity },
+        options
+      );
+
+      if (!updated) throw new InternalServerError('Failed to update inventory quantity');
+      return this.convertToJson(updated as IDataValues<IInventory>) as IInventory;
+    } else {
+      throw new InternalServerError('Inventory record not found for this product and provider');
+    }
+  }
+
+  async upsertInventory(productId: string, providerId: string, quantity: number, unitPrice: number, options?: { t?: Transaction }) {
+    // Check if inventory record exists
+    const existingInventory = await this._repo.find({ productId, providerId }, options);
+
+    if (existingInventory.length > 0) {
+      // Update existing record - add to quantity
+      const current = existingInventory[0];
+      const newQuantity = current.quantity + quantity;
+
+      const updated = await this._repo.update(
+        { id: current.id },
+        { quantity: newQuantity, unitPrice }, // Update price to latest
+        options
+      );
+
+      if (!updated) throw new InternalServerError('Failed to update inventory');
+      return this.convertToJson(updated as IDataValues<IInventory>) as IInventory;
+    } else {
+      // Create new record
+      const created = await this._repo.create({
+        productId,
+        providerId,
+        quantity,
+        unitPrice
+      }, options);
+
+      if (!created) throw new InternalServerError('Failed to create inventory record');
+      return this.convertToJson(created as IDataValues<IInventory>) as IInventory;
+    }
+  }
+
+  async checkInventoryAvailability(productId: string, requiredQuantity: number) {
+    const inventoryRecords = await this._repo.find({ productId });
+    const totalQuantity = inventoryRecords.reduce((sum, record) => sum + record.quantity, 0);
+
+    return {
+      available: totalQuantity >= requiredQuantity,
+      currentQuantity: totalQuantity
+    };
   }
 }
