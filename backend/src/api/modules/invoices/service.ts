@@ -8,10 +8,13 @@ import Company from '../companies/model';
 import Zone from '../zones/model';
 import Payment from '../payments/model';
 import Provider from '../providers/model';
-import { invoiceItemService } from '../bootstrap';
+import { invoiceItemService, billService, inventoryService, inventoryTransactionService, paymentService } from '../bootstrap';
 import { includes } from 'lodash';
 import InvoiceItem from '../invoice-items/model';
 import Product from '../products/model';
+import Bill from '../bills/model';
+import { InvoiceType } from './types';
+import { TransactionType } from '../inventory-transactions/types';
 
 export interface IInvoiceService {
   findInvoices(query: Record<string, unknown>): Promise<IInvoice[]>;
@@ -22,6 +25,15 @@ export interface IInvoiceService {
   findInvoiceById(id: string): Promise<IInvoice | null>;
   recordPayment(invoiceId: string, amount: number): Promise<IInvoice>;
   findInvoiceWithItems(id: string): Promise<IInvoice | null>;
+  findInvoiceWithBills(id: string): Promise<IInvoice | null>;
+  calculateEffectiveBalance(invoiceId: string): Promise<{
+    originalAmount: number;
+    totalPayments: number;
+    totalReturns: number;
+    effectiveBalance: number;
+    effectivePaidAmount: number;
+    effectiveDueAmount: number;
+  }>;
 }
 
 export default class InvoiceService implements IInvoiceService {
@@ -40,18 +52,34 @@ export default class InvoiceService implements IInvoiceService {
 
   async createInvoice(body: IInvoiceCreationBody) {
     const t = await sequelize.startUnmanagedTransaction();
-    const { items, ...invoiceData } = body;
+    const { items, bills, ...invoiceData } = body;
     try{
          // Create the invoice
       const invoice = await this._repo.create(invoiceData, { t });
       if (!invoice) throw new InternalServerError('Create invoice failed');
-      
-      // If there are items, create them
+
+      // If there are items, create them and handle inventory
       if(items?.length){
         const payload = items.map(item => ({...item, invoiceId: invoice.id}));
         await invoiceItemService.createInvoiceItemInBulk(payload, t);
+
+        // Handle inventory based on invoice type
+        if (invoice.type === InvoiceType.PROVIDER) {
+          // Provider invoice: Add products to inventory
+          console.log({invoice})
+          await this.handleProviderInvoiceInventory(invoice, items, t);
+        } else if (invoice.type === InvoiceType.ZONE) {
+          // Zone invoice: Deduct products from inventory
+          await this.handleZoneInvoiceInventory(invoice, items, t);
+        }
       }
-      
+
+      // If there are bills, create them
+      if(bills?.length){
+        const billPayload = bills.map(bill => ({...bill, invoiceId: invoice.id}));
+        await billService.createBillInBulk(billPayload, t);
+      }
+
       await t.commit();
       return this.convertToJson(invoice) as IInvoice;
       }catch(err){
@@ -349,13 +377,13 @@ if (search) {
       if (!updatedInvoice) throw new InternalServerError('Failed to update invoice');
       
       // Create a payment record
-      await Payment.create({
+      await paymentService.createPayment({
         invoiceId,
         amount,
         paymentDate: new Date(),
         paymentMethod: 'manual', // Default method
         remarks: 'Payment recorded via API'
-      }, { transaction: t });
+      }, { t });
       
       return this.convertToJson(updatedInvoice as IDataValues<IInvoice>) as IInvoice;
     });
@@ -364,13 +392,148 @@ if (search) {
   async findInvoiceWithItems(id: string) {
     const invoice = await this._repo.find({id}, {
       include: [
-        { model: Provider, as: 'ReceiverProvider' },
+        { model: Provider, as:'ReceiverProvider' },
         { model: Zone, as: 'ReceiverZone' },
-        {model: InvoiceItem, include: [{ model: Product }]}
+        {model: InvoiceItem, include: [{ model: Product }]},
+        {model: Bill}
       ]
     });
-    if (!invoice) return null;
-    
-    return invoice[0];
+    if (!invoice || invoice.length === 0) return null;
+
+    return this.convertToJson(invoice[0] as IDataValues<IInvoice>) as IInvoice;
+  }
+
+  async findInvoiceWithBills(id: string) {
+    const invoice = await this._repo.find({id}, {
+      include: [
+        { model: Provider, as: 'ReceiverProvider' },
+        { model: Zone, as: 'ReceiverZone' },
+        {model: Bill}
+      ]
+    });
+    if (!invoice || invoice.length === 0) return null;
+
+    return this.convertToJson(invoice[0] as IDataValues<IInvoice>) as IInvoice;
+  }
+
+  private async handleProviderInvoiceInventory(invoice: any, items: any[], t: any) {
+    // For provider invoices, add products to inventory
+    console.log(invoice);
+    const inventoryTransactions = [];
+
+    for (const item of items) {
+      // Add to inventory using upsert (create or update)
+      await inventoryService.upsertInventory(
+        {
+          productId: item.productId,
+          providerId: invoice.toProviderId,
+          companyId: invoice.company_id,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,},
+          { t }
+      );
+
+      // Create inventory transaction record
+      inventoryTransactions.push({
+        productId: item.productId,
+        transactionType: TransactionType.PURCHASE,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        relatedInvoiceId: invoice.id,
+        providerId: invoice.receiverProviderId,
+        remarks: `Purchase from provider invoice ${invoice.id}`
+      });
+    }
+
+    // Create all inventory transactions
+    if (inventoryTransactions.length > 0) {
+      await inventoryTransactionService.createTransactionInBulk(inventoryTransactions, t);
+    }
+  }
+
+  private async handleZoneInvoiceInventory(invoice: any, items: any[], t: any) {
+    // For zone invoices, deduct products from inventory
+    const inventoryTransactions = [];
+
+    for (const item of items) {
+      // Check inventory availability first
+      const availability = await inventoryService.checkInventoryAvailability(
+        item.productId,
+        item.quantity
+      );
+
+      if (!availability.available) {
+        throw new Error(
+          `Insufficient inventory for product ${item.productId}. Available: ${availability.currentQuantity}, Required: ${item.quantity}`
+        );
+      }
+
+      // Find the inventory record to deduct from (we'll use the first available provider)
+      const inventoryRecords = await inventoryService.findInventoryByProduct(item.productId);
+      if (inventoryRecords.length === 0) {
+        throw new InternalServerError(`No inventory found for product ${item.productId}`);
+      }
+
+      // Deduct from inventory (negative quantity)
+      await inventoryService.updateInventoryQuantity(
+        item.productId,
+        inventoryRecords[0].providerId,
+        -item.quantity,
+        { t }
+      );
+
+      // Create inventory transaction record
+      inventoryTransactions.push({
+        productId: item.productId,
+        transactionType: TransactionType.DISTRIBUTION,
+        quantity: -item.quantity, // Negative for distribution
+        unitPrice: item.unitPrice,
+        relatedInvoiceId: invoice.id,
+        zoneId: invoice.receiverZoneId,
+        providerId: inventoryRecords[0].providerId,
+        remarks: `Distribution to zone invoice ${invoice.id}`
+      });
+    }
+
+    // Create all inventory transactions
+    if (inventoryTransactions.length > 0) {
+      await inventoryTransactionService.createTransactionInBulk(inventoryTransactions, t);
+    }
+  }
+
+  async calculateEffectiveBalance(invoiceId: string) {
+    // Get the original invoice
+    const invoice = await this._repo.findById(invoiceId);
+    if (!invoice) {
+      throw new InternalServerError('Invoice not found');
+    }
+
+    // Get all payments for this invoice
+    const payments = await Payment.findAll({
+      where: { invoiceId },
+      attributes: ['amount']
+    });
+    const totalPayments = payments.reduce((sum, payment) => sum + payment.amount, 0);
+
+    // Get all returns for this invoice
+    const { productReturnService } = require('../bootstrap');
+    const returns = await productReturnService.findReturnsByInvoice(invoiceId);
+    const totalReturns = returns
+      .filter((ret: any) => ret.status === 'approved')
+      .reduce((sum: number, ret: any) => sum + ret.totalReturnAmount, 0);
+
+    const originalAmount = invoice.totalAmount;
+    const effectiveBalance = originalAmount - totalReturns;
+    const effectivePaidAmount = Math.min(totalPayments, effectiveBalance);
+    const effectiveDueAmount = Math.max(0, effectiveBalance - totalPayments);
+
+    return {
+      originalAmount,
+      totalPayments,
+      totalReturns,
+      effectiveBalance,
+      effectivePaidAmount,
+      effectiveDueAmount
+    };
   }
 }

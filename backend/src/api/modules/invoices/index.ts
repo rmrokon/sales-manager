@@ -35,3 +35,9 @@ InvoiceRouter.route('/:invoiceId/payments')
 
 InvoiceRouter.route('/:invoiceId/with-items')
   .get([isAuthenticated], asyncCatchHandler(invoiceController.findInvoiceWithItems));
+
+InvoiceRouter.route('/:invoiceId/with-bills')
+  .get([isAuthenticated], asyncCatchHandler(invoiceController.findInvoiceWithBills));
+
+InvoiceRouter.route('/:invoiceId/effective-balance')
+  .get([isAuthenticated], asyncCatchHandler(invoiceController.getEffectiveBalance));

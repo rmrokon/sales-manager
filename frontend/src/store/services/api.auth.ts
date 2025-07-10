@@ -1,3 +1,4 @@
+"use-client"
 import { storeApiConfig } from "../api-config";
 import { setAuthUser } from "../reducers/auth.reducer";
 

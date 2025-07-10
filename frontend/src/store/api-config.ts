@@ -74,7 +74,10 @@ import {
       "product",
       "invoice",
       "zone",
-      "payment"
+      "payment",
+      "Returns",
+      "Inventory",
+      "InventoryTransactions"
     ],
     endpoints: (builder) => ({
       getMe: builder.query({

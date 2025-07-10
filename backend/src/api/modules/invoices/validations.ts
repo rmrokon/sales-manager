@@ -2,6 +2,14 @@ import { z } from 'zod';
 import { InvoiceType } from './types';
 import { BulkInvoiceItemCreationValidationSchema } from '../invoice-items/validations';
 
+// Bill validation schema for invoice creation
+export const BulkBillCreationValidationSchema = z.array(z.object({
+  title: z.string({required_error: 'Bill title is required'}),
+  description: z.string().optional(),
+  amount: z.number({required_error: 'Bill amount is required'})
+    .min(0, 'Bill amount cannot be negative'),
+}));
+
 export const InvoiceCreationValidationSchema = z.object({
   type: z.enum([InvoiceType.PROVIDER, InvoiceType.ZONE], {
     required_error: 'Invoice type is required',
@@ -18,7 +26,8 @@ export const InvoiceCreationValidationSchema = z.object({
     .default(0),
   dueAmount: z.number({required_error: 'Due amount is required'})
     .min(0, 'Due amount cannot be negative'),
-  items: BulkInvoiceItemCreationValidationSchema.optional()
+  items: BulkInvoiceItemCreationValidationSchema.optional(),
+  bills: BulkBillCreationValidationSchema.optional(),
 }).refine(data => {
   // Ensure either toCompanyId or toZoneId is provided based on type
   if (data.type === InvoiceType.PROVIDER && !data.toProviderId) {

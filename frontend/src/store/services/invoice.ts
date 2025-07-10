@@ -1,5 +1,6 @@
 import { storeApiConfig } from "../api-config";
-import { IInvoice, InvoiceType } from "@/utils/types/invoice";
+import { IInvoice, InvoiceType, IInvoiceItem } from "@/utils/types/invoice";
+import { IBill } from "@/utils/types/bill";
 
 export interface InvoiceCreateParams {
   type: InvoiceType;
@@ -9,6 +10,9 @@ export interface InvoiceCreateParams {
   totalAmount: number;
   paidAmount: number;
   dueAmount: number;
+  company_id?: string;
+  items?: Omit<IInvoiceItem, 'id' | 'invoiceId' | 'createdAt' | 'updatedAt' | 'Product'>[];
+  bills?: Omit<IBill, 'id' | 'invoiceId' | 'createdAt' | 'updatedAt'>[];
 }
 
 export interface InvoiceUpdateParams extends Partial<InvoiceCreateParams> {
@@ -58,6 +62,17 @@ export const invoiceApi = storeApiConfig.injectEndpoints({
         credentials: "include",
       }),
       providesTags: (result, error, id) => [{ type: "invoice", id }],
+      transformResponse: (response: { result: any }) => ({ result: response.result }),
+    }),
+
+    getInvoiceWithBills: builder.query({
+      query: (id) => ({
+        url: `/invoices/${id}/with-bills`,
+        method: "GET",
+        credentials: "include",
+      }),
+      providesTags: (result, error, id) => [{ type: "invoice", id }],
+      transformResponse: (response: { result: any }) => ({ result: response.result }),
     }),
 
     createInvoice: builder.mutation({
@@ -111,6 +126,7 @@ export const {
   useGetInvoicesQuery,
   useGetInvoiceByIdQuery,
   useGetInvoiceWithItemsQuery,
+  useGetInvoiceWithBillsQuery,
   useCreateInvoiceMutation,
   useUpdateInvoiceMutation,
   useDeleteInvoiceMutation,

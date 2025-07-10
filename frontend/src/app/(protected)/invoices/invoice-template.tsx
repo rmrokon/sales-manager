@@ -1,21 +1,27 @@
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { IInvoice, InvoiceType } from "@/utils/types/invoice";
 import { IInvoiceItem } from "@/utils/types/invoice";
+import { IBill } from "@/utils/types/bill";
 
 interface InvoiceTemplateProps {
   invoice: IInvoice;
-  items: IInvoiceItem[];
+  items?: IInvoiceItem[];
+  bills?: IBill[];
 }
 
-export default function InvoiceTemplate({ invoice, items }: InvoiceTemplateProps) {
+export default function InvoiceTemplate({ invoice, items = [], bills = [] }: InvoiceTemplateProps) {
   const recipientName = invoice.type === InvoiceType.PROVIDER 
     ? invoice.ReceiverProvider?.name 
     : invoice.ReceiverZone?.name;
 
   const calculateSubtotal = () => {
-    return items.reduce((sum, item) => {
+    const itemsTotal = items.reduce((sum, item) => {
       return sum + (item.quantity * item.unitPrice);
     }, 0);
+    const billsTotal = bills.reduce((sum, bill) => {
+      return sum + bill.amount;
+    }, 0);
+    return itemsTotal + billsTotal;
   };
 
   const calculateDiscount = () => {
@@ -63,34 +69,65 @@ export default function InvoiceTemplate({ invoice, items }: InvoiceTemplateProps
         </div>
       </div>
 
-      <div className="mt-8">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-300">
-              <th className="py-2 text-left">Item</th>
-              <th className="py-2 text-right">Quantity</th>
-              <th className="py-2 text-right">Unit Price</th>
-              <th className="py-2 text-right">Discount</th>
-              <th className="py-2 text-right">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => (
-              <tr key={item.id} className="border-b border-gray-200">
-                <td className="py-3">{item.Product?.name || 'Unknown Product'}</td>
-                <td className="py-3 text-right">{item.quantity}</td>
-                <td className="py-3 text-right">{formatCurrency(item.unitPrice)}</td>
-                <td className="py-3 text-right">{item.discountPercent}%</td>
-                <td className="py-3 text-right">
-                  {formatCurrency(
-                    item.quantity * item.unitPrice * (1 - item.discountPercent / 100)
-                  )}
-                </td>
+      {/* Show Items Table if items exist */}
+      {items.length > 0 && (
+        <div className="mt-8">
+          <h3 className="font-semibold mb-4">Items</h3>
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-300">
+                <th className="py-2 text-left">Item</th>
+                <th className="py-2 text-right">Quantity</th>
+                <th className="py-2 text-right">Unit Price</th>
+                <th className="py-2 text-right">Discount</th>
+                <th className="py-2 text-right">Amount</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.id} className="border-b border-gray-200">
+                  <td className="py-3">{item.Product?.name || 'Unknown Product'}</td>
+                  <td className="py-3 text-right">{item.quantity}</td>
+                  <td className="py-3 text-right">{formatCurrency(item.unitPrice)}</td>
+                  <td className="py-3 text-right">{item.discountPercent}%</td>
+                  <td className="py-3 text-right">
+                    {formatCurrency(
+                      item.quantity * item.unitPrice * (1 - item.discountPercent / 100)
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Show Bills Table if bills exist */}
+      {bills.length > 0 && (
+        <div className="mt-8">
+          <h3 className="font-semibold mb-4">Bills</h3>
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-300">
+                <th className="py-2 text-left">Title</th>
+                <th className="py-2 text-left">Description</th>
+                <th className="py-2 text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bills.map((bill) => (
+                <tr key={bill.id} className="border-b border-gray-200">
+                  <td className="py-3">{bill.title}</td>
+                  <td className="py-3">{bill.description || '-'}</td>
+                  <td className="py-3 text-right">
+                    {formatCurrency(bill.amount)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="mt-8 flex justify-end">
         <div className="w-64">

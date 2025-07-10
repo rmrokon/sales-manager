@@ -3,6 +3,7 @@ import { InvoiceCreationValidationSchema, InvoiceUpdateValidationSchema } from '
 import { Attributes, CreationAttributes } from '@sequelize/core';
 import Invoice from './model';
 import { IInvoiceItem } from '../invoice-items/types';
+import { IBill } from '../bills/types';
 
 export interface IInvoice extends Attributes<Invoice>{};
 export type ICreateInvoice = CreationAttributes<Invoice>;
@@ -16,6 +17,7 @@ export type ICreateInvoice = CreationAttributes<Invoice>;
 
 export interface IInvoiceCreationBody extends z.infer<typeof InvoiceCreationValidationSchema> {
   items?: IInvoiceItem[];
+  bills?: Omit<IBill, 'id' | 'invoiceId' | 'createdAt' | 'updatedAt'>[];
 }
 
 export type IInvoiceUpdateBody = z.infer<typeof InvoiceUpdateValidationSchema>;

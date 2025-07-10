@@ -10,6 +10,10 @@ import { InventoryRouter } from "./inventory";
 import { DiscountRouter } from "./discounts";
 import { InvoiceRouter } from "./invoices";
 import { InvoiceItemRouter } from "./invoice-items";
+import { BillRouter } from "./bills";
+import { InventoryTransactionRouter } from "./inventory-transactions";
+import { ProductReturnRouter } from "./product-returns";
+import { ProductReturnItemRouter } from "./product-return-items";
 
 export const ROUTES = {
     '/users': UserRouter,
@@ -24,4 +28,8 @@ export const ROUTES = {
     '/discounts': DiscountRouter,
     '/invoices': InvoiceRouter,
     '/invoice-items': InvoiceItemRouter,
+    '/bills': BillRouter,
+    '/inventory-transactions': InventoryTransactionRouter,
+    '/returns': ProductReturnRouter,
+    '/return-items': ProductReturnItemRouter,
 }

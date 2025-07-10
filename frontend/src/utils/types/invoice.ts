@@ -1,3 +1,5 @@
+import { IBill } from './bill';
+
 export enum InvoiceType {
   PROVIDER = 'provider',
   ZONE = 'zone',
@@ -38,4 +40,9 @@ export interface IInvoiceItem {
     name: string;
     price: number;
   };
+}
+
+export interface IInvoiceWithItems extends IInvoice {
+  InvoiceItems: IInvoiceItem[];
+  bills: IBill[];
 }

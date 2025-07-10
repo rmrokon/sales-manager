@@ -57,6 +57,22 @@ import InvoiceItem from './invoice-items/model';
 import InvoiceItemRepository from './invoice-items/repository';
 import InvoiceItemService from './invoice-items/service';
 import InvoiceItemController from './invoice-items/controller';
+import BillRepository from "./bills/repository";
+import Bill from "./bills/model";
+import BillService from "./bills/service";
+import BillController from "./bills/controller";
+import InventoryTransaction from './inventory-transactions/model';
+import InventoryTransactionRepository from './inventory-transactions/repository';
+import InventoryTransactionService from './inventory-transactions/service';
+import InventoryTransactionController from './inventory-transactions/controller';
+import ProductReturn from './product-returns/model';
+import ProductReturnRepository from './product-returns/repository';
+import ProductReturnService from './product-returns/service';
+import ProductReturnController from './product-returns/controller';
+import ProductReturnItem from './product-return-items/model';
+import ProductReturnItemRepository from './product-return-items/repository';
+import ProductReturnItemService from './product-return-items/service';
+import ProductReturnItemController from './product-return-items/controller';
 
 // Credential
 export const credentialRepository = new CredentialRepository(Credential as unknown as BaseModel<ICredential>);
@@ -121,3 +137,19 @@ export const invoiceController = new InvoiceController(invoiceService);
 export const invoiceItemRepository = new InvoiceItemRepository(InvoiceItem);
 export const invoiceItemService = new InvoiceItemService(invoiceItemRepository, invoiceService);
 export const invoiceItemController = new InvoiceItemController(invoiceItemService);
+
+export const billRepository = new BillRepository(Bill);
+export const billService = new BillService(billRepository);
+export const billController = new BillController(billService);
+
+export const inventoryTransactionRepository = new InventoryTransactionRepository(InventoryTransaction);
+export const inventoryTransactionService = new InventoryTransactionService(inventoryTransactionRepository);
+export const inventoryTransactionController = new InventoryTransactionController(inventoryTransactionService);
+
+export const productReturnItemRepository = new ProductReturnItemRepository(ProductReturnItem);
+export const productReturnItemService = new ProductReturnItemService(productReturnItemRepository);
+export const productReturnItemController = new ProductReturnItemController(productReturnItemService);
+
+export const productReturnRepository = new ProductReturnRepository(ProductReturn);
+export const productReturnService = new ProductReturnService(productReturnRepository, productReturnItemRepository);
+export const productReturnController = new ProductReturnController(productReturnService);

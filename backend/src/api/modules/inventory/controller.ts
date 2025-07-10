@@ -41,7 +41,8 @@ export default class InventoryController {
   updateInventory = async (req: Request, res: Response) => {
     const { inventoryId } = req.params;
     const body = req.body as IInventoryUpdateBody;
-    const inventory = await this._service.updateInventory(inventoryId, body);
+    if(!req.auth?.cid) throw new Error("Company ID is missing");
+    const inventory = await this._service.updateInventory(inventoryId, {...body, companyId: req.auth?.cid});
     return SuccessResponses(req, res, inventory, {
       statusCode: 200,
     });
@@ -51,6 +52,26 @@ export default class InventoryController {
     const { inventoryId } = req.params;
     const result = await this._service.deleteInventory(inventoryId);
     return SuccessResponses(req, res, result, {
+      statusCode: 200,
+    });
+  };
+
+  getInventoryStats = async (req: Request, res: Response) => {
+    if(!req.auth?.cid) throw new Error("Company ID is missing");
+    const stats = await this._service.getInventoryStats(req.auth?.cid);
+    return SuccessResponses(req, res, stats, {
+      statusCode: 200,
+    });
+  };
+
+  getLowStockItems = async (req: Request, res: Response) => {
+    const { threshold } = req.query;
+    if(!req.auth?.cid) throw new Error("Company ID is missing");
+    const lowStockItems = await this._service.getLowStockItems(
+      req.auth?.cid,
+      threshold ? parseInt(threshold as string) : undefined
+    );
+    return SuccessResponses(req, res, lowStockItems, {
       statusCode: 200,
     });
   };

@@ -16,6 +16,12 @@ InventoryRouter.route('/')
     asyncCatchHandler(inventoryController.createInventory),
   );
 
+InventoryRouter.route('/stats')
+  .get([isAuthenticated], asyncCatchHandler(inventoryController.getInventoryStats));
+
+InventoryRouter.route('/low-stock')
+  .get([isAuthenticated], asyncCatchHandler(inventoryController.getLowStockItems));
+
 InventoryRouter.route('/:inventoryId')
   .get([isAuthenticated], asyncCatchHandler(inventoryController.findInventoryById))
   .patch(

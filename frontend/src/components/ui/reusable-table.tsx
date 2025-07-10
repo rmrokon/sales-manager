@@ -138,7 +138,7 @@ export function DataTable<T>({
 
   // Use external pagination if provided, otherwise use internal
   const actualCurrentPage = isServerSidePagination ? currentPage : internalCurrentPage
-  const actualTotalItems = isServerSidePagination ? totalItems : data.length
+  const actualTotalItems = isServerSidePagination ? totalItems : data?.length
   const actualPageSize = pageSize
 
   // Calculate pagination values
@@ -148,7 +148,7 @@ export function DataTable<T>({
 
   // Get current page data (only for client-side pagination)
   const paginatedData = pagination && !isServerSidePagination
-    ? data.slice(startIndex, endIndex)
+    ? data?.slice(startIndex, endIndex)
     : data
 
   const handlePageChange = (newPage: number) => {

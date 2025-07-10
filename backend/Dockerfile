@@ -7,7 +7,6 @@ WORKDIR /app
 # Install dependencies
 COPY package.json yarn.lock ./
 RUN yarn install
-RUN yarn add ts-node-dev
 
 # Copy the source code
 COPY . .

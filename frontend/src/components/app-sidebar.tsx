@@ -1,5 +1,5 @@
 "use client"
-import { Banknote, Building2, ChevronUp, Home, LocateIcon, Moon, MoreHorizontal, Package, Receipt, Settings, Sun, Truck, User2 } from "lucide-react"
+import { Banknote, Building2, ChevronUp, FileText, Home, LocateIcon, Moon, MoreHorizontal, Package, Receipt, RotateCcw, Settings, Sun, Truck, User2, Warehouse } from "lucide-react"
 import {
     Sidebar,
     SidebarContent,
@@ -65,9 +65,23 @@ const items = [
         dropDown: <></>,
     },
     {
+        title: "Inventory",
+        url: "/inventory",
+        icon: Warehouse,
+        actionBtn: <></>,
+        dropDown: <></>,
+    },
+    {
         title: "Invoices",
         url: "/invoices",
         icon: Receipt,
+        actionBtn: <></>,
+        dropDown: <></>,
+    },
+    {
+        title: "Bills",
+        url: "/bills",
+        icon: FileText,
         actionBtn: <></>,
         dropDown: <></>,
     },
@@ -82,6 +96,13 @@ const items = [
         title: "Payments",
         url: "/payments",
         icon: Banknote,
+        actionBtn: <></>,
+        dropDown: <></>,
+    },
+    {
+        title: "Returns",
+        url: "/returns",
+        icon: RotateCcw,
         actionBtn: <></>,
         dropDown: <></>,
     },
