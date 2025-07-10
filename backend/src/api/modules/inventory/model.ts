@@ -2,12 +2,14 @@ import { CreationOptional, DataTypes, InferAttributes, InferCreationAttributes, 
 import { sequelize } from '../../../configs';
 import Product from '../products/model';
 import Provider from '../providers/model';
+import Company from '../companies/model';
 
 export default class Inventory extends Model<InferAttributes<Inventory>, InferCreationAttributes<Inventory>> {
   declare id: CreationOptional<string>;
   declare productId: string;
   declare providerId: string;
   declare quantity: number;
+  declare companyId?: string;
   declare unitPrice: number;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
@@ -37,6 +39,15 @@ Inventory.init(
       allowNull: false,
       references: {
         model: Provider,
+        key: 'id'
+      }
+    },
+    companyId: {
+      field: 'company_id',
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: Company,
         key: 'id'
       }
     },
@@ -100,3 +111,18 @@ Inventory.belongsTo(Provider, {
     field: 'provider_id'
   }
 });
+
+Company.hasMany(Inventory, {
+  foreignKey: {
+    name: 'companyId',
+    field: 'company_id'
+  }
+});
+
+Inventory.belongsTo(Company, {
+  foreignKey: {
+    name: 'companyId',
+    field: 'company_id'
+  }
+});
+

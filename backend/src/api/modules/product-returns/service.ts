@@ -8,7 +8,7 @@ import Invoice from '../invoices/model';
 import Zone from '../zones/model';
 import ProductReturnItem from '../product-return-items/model';
 import Product from '../products/model';
-import { inventoryService, inventoryTransactionService, paymentService, productReturnItemService } from '../bootstrap';
+import { inventoryService, inventoryTransactionService, invoiceService, paymentService, productReturnItemService } from '../bootstrap';
 import { TransactionType } from '../inventory-transactions/types';
 import Payment from '../payments/model';
 
@@ -44,7 +44,7 @@ export default class ProductReturnService implements IProductReturnService {
       const { returnItems, paymentAmount, ...returnData } = body;
 
       // Validate the original invoice exists and is a zone invoice
-      const originalInvoice = await Invoice.findByPk(body.originalInvoiceId, { transaction: t });
+      const originalInvoice = await invoiceService.findInvoiceById(body.originalInvoiceId);
       if (!originalInvoice) {
         throw new InternalServerError('Original invoice not found');
       }
@@ -66,13 +66,13 @@ export default class ProductReturnService implements IProductReturnService {
 
       // If there's a payment amount, create a payment record
       if (paymentAmount && paymentAmount > 0) {
-        await Payment.create({
+        await paymentService.createPayment({
           invoiceId: body.originalInvoiceId,
           amount: paymentAmount,
           paymentDate: new Date(),
           paymentMethod: 'return_payment',
           remarks: `Payment with return ${productReturn.id}`
-        }, { transaction: t });
+        }, { t });
       }
 
       return this.convertToJson(productReturn as IDataValues<IProductReturn>) as IProductReturn;

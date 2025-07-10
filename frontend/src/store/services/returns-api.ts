@@ -1,10 +1,13 @@
+import { IProduct } from "@/utils/types/product";
 import { storeApiConfig } from "../api-config";
 
 export interface ReturnItem {
-  productId: string;
-  returnedQuantity: number;
-  unitPrice: number;
-  returnAmount: number;
+  id?: string;
+    productId: string;
+    returnedQuantity: number;
+    unitPrice: number;
+    returnAmount: number;
+    product?: Partial<IProduct>
 }
 
 export interface CreateReturnParams {
@@ -30,43 +33,63 @@ export interface ProductReturn {
   remarks?: string;
   createdAt: string;
   updatedAt: string;
-  Zone?: {
+  zone?: {
     id: string;
     name: string;
   };
-  OriginalInvoice?: {
+  originalInvoice?: {
     id: string;
     invoiceNumber: string;
   };
-  ReturnItems?: Array<{
-    id: string;
-    productId: string;
-    returnedQuantity: number;
-    unitPrice: number;
-    returnAmount: number;
-    Product?: {
-      id: string;
-      name: string;
-    };
-  }>;
+  returnItems?: ReturnItem[];
 }
 
 export const returnsApi = storeApiConfig.injectEndpoints({
   endpoints: (builder) => ({
-    getReturns: builder.query<ProductReturn[], Record<string, any>>({
+    getReturns: builder.query<{result: ProductReturn[]; pagination?: any}, Record<string, any>>({
       query: (params) => ({
         url: '/returns',
         method: 'GET',
         params,
       }),
+      transformResponse: (response: any) => {
+        // Handle both paginated and non-paginated responses
+        if (response.pagination) {
+          return {
+            result: response.result,
+            pagination: response.pagination
+          };
+        }
+        return { result: response.result };
+      },
       providesTags: ['Returns'],
     }),
 
-    getReturnById: builder.query<ProductReturn, string>({
+    getReturnById: builder.query<{result: ProductReturn}, string>({
       query: (id) => ({
         url: `/returns/${id}`,
         method: 'GET',
       }),
+      transformResponse: (response: any) => {
+        const transformedData = {
+          ...response.result,
+          totalReturnAmount: Number(response.result.totalReturnAmount),
+          zone: response.result.zone,
+          returnItems: response.result.ReturnItems.map(item => ({
+            ...item,
+            returnAmount: Number(item.returnAmount),
+            unitPrice: Number(item.unitPrice),
+            returnedQuantity: Number(item.returnedQuantity)
+          }))
+        };
+        if(response.pagination){
+          return {
+            result: transformedData,
+            pagination: response.pagination
+          }
+        }
+        return {result: transformedData}
+      },
       providesTags: (result, error, id) => [{ type: 'Returns', id }],
     }),
 
@@ -94,7 +117,7 @@ export const returnsApi = storeApiConfig.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Returns', 'Invoices', 'Inventory'],
+      invalidatesTags: ['Returns', 'invoice', 'Inventory'],
     }),
 
     updateReturn: builder.mutation<ProductReturn, { id: string; data: UpdateReturnParams }>({

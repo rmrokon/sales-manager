@@ -1,4 +1,6 @@
+import { IProduct } from '@/utils/types/product';
 import { storeApiConfig } from '../api-config';
+import { IProvider } from '@/utils/types/provider';
 
 export interface InventoryItem {
   id: string;
@@ -9,16 +11,8 @@ export interface InventoryItem {
   totalValue: number;
   createdAt: string;
   updatedAt: string;
-  Product?: {
-    id: string;
-    name: string;
-    price: number;
-    description?: string;
-  };
-  Provider?: {
-    id: string;
-    name: string;
-  };
+  product?: Partial<IProduct>;
+  provider?: Partial<IProvider>;
 }
 
 export interface InventoryTransaction {
@@ -34,17 +28,9 @@ export interface InventoryTransaction {
   referenceType?: 'INVOICE' | 'RETURN';
   createdAt: string;
   updatedAt: string;
-  Product?: {
-    id: string;
-    name: string;
-    price: number;
-    description?: string;
-  };
-  Provider?: {
-    id: string;
-    name: string;
-  };
-  Zone?: {
+  product?: Partial<IProduct>;
+  provider?: Partial<IProvider>;
+  zone?: {
     id: string;
     name: string;
   };
@@ -72,12 +58,28 @@ export interface LowStockItem {
 
 export const inventoryApi = storeApiConfig.injectEndpoints({
   endpoints: (builder) => ({
-    getInventory: builder.query<InventoryItem[], Record<string, any>>({
+    getInventory: builder.query<{result: InventoryItem[], pagination?: any}, Record<string, any>>({
       query: (params) => ({
         url: '/inventory',
         method: 'GET',
         params,
       }),
+      transformResponse: (response: any) => {
+        const transformedData = response.result.map(item => ({
+          ...item, 
+          totalValue: Number(item.unitPrice) * Number(item.quantity),
+          unitPrice: Number(item.unitPrice)
+        }));
+        // Handle both paginated and non-paginated responses
+        if (response.pagination) {
+          return {
+            result: transformedData,
+            pagination: response.pagination
+          };
+        }
+        console.log(response);
+        return  {result: transformedData}
+      },
       providesTags: ['Inventory'],
     }),
 
@@ -98,29 +100,73 @@ export const inventoryApi = storeApiConfig.injectEndpoints({
       providesTags: ['Inventory'],
     }),
 
-    getInventoryTransactions: builder.query<InventoryTransaction[], Record<string, any>>({
+    getInventoryTransactions: builder.query<{result: InventoryTransaction[], pagination?: any}, Record<string, any>>({
       query: (params) => ({
         url: '/inventory-transactions',
         method: 'GET',
         params,
       }),
+      transformResponse: (response: any) => {
+        const transformedData = response.result.map(item => ({
+          ...item,
+          totalAmount: Number(item.unitPrice) * Number(item.quantity),
+          type: item.transactionType
+        }));
+        // Handle both paginated and non-paginated responses
+        if (response.pagination) {
+          return {
+            result: transformedData,
+            pagination: response.pagination
+          };
+        }
+
+        return {result: transformedData}
+      },
       providesTags: ['InventoryTransactions'],
     }),
 
-    getInventoryStats: builder.query<InventoryStats, void>({
+    getInventoryStats: builder.query<{result: InventoryStats}, void>({
       query: () => ({
         url: '/inventory/stats',
         method: 'GET',
       }),
+      transformResponse: (response: any) => {
+        const transformedData = {
+          ...response.result,
+          totalValue: Number(response.result.totalValue),
+          lowStockItems: Number(response.result.lowStockItems),
+          recentTransactions: Number(response.result.recentTransactions)
+        };
+        return {result: transformedData}
+      },
       providesTags: ['Inventory'],
     }),
 
-    getLowStockItems: builder.query<LowStockItem[], { threshold?: number }>({
+    getLowStockItems: builder.query<{result: LowStockItem[], pagination?: any}, { threshold?: number }>({
       query: (params) => ({
         url: '/inventory/low-stock',
         method: 'GET',
         params,
       }),
+      transformResponse: (response: any) => {
+        const transformedData = response.result.map(item => ({
+          ...item,
+          currentStock: Number(item.currentStock),
+          minimumStock: Number(item.minimumStock),
+          providers: item.providers.map(provider => ({
+            ...provider,
+            quantity: Number(provider.quantity),
+            unitPrice: Number(provider.unitPrice)
+          }))
+        }));
+        if(response.pagination){
+          return {
+            result: transformedData,
+            pagination: response.pagination
+          }
+        }
+        return {result: transformedData};
+      },
       providesTags: ['Inventory'],
     }),
 

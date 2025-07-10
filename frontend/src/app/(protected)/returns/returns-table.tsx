@@ -33,7 +33,7 @@ export function ReturnsTable() {
   const { data: returns = [], isLoading, refetch } = useGetReturnsQuery({});
   const [approveReturn] = useApproveReturnMutation();
   const [rejectReturn] = useRejectReturnMutation();
-
+console.log('returns =====> ', {returns})
   const handleApprove = async (returnId: string) => {
     try {
       await approveReturn(returnId).unwrap();
@@ -127,7 +127,7 @@ export function ReturnsTable() {
       type: 'custom',
       onClick: (returnItem) => handleApprove(returnItem.id),
       tooltip: 'Approve Return',
-      disabled: (returnItem) => returnItem.status !== 'pending',
+      disabled: (returnItem) => returnItem.status.toLocaleLowerCase() !== 'pending',
       className: 'text-green-600 hover:text-green-700',
       icon: <CheckCircle className="h-4 w-4" />,
     },
@@ -135,7 +135,7 @@ export function ReturnsTable() {
       type: 'custom',
       onClick: (returnItem) => handleReject(returnItem.id),
       tooltip: 'Reject Return',
-      disabled: (returnItem) => returnItem.status !== 'pending',
+      disabled: (returnItem) => returnItem.status.toLocaleLowerCase() !== 'pending',
       className: 'text-red-600 hover:text-red-700',
       icon: <XCircle className="h-4 w-4" />,
     },

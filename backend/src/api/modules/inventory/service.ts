@@ -1,6 +1,6 @@
-import { Transaction } from '@sequelize/core';
+import { Op, Transaction } from '@sequelize/core';
 import { IDataValues, InternalServerError } from '../../../utils';
-import { IInventoryCreationBody, IInventoryUpdateBody, IInventory } from './types';
+import { IInventoryCreationBody, IInventoryUpdateBody, IInventory, IInventoryStats, ILowStockItem } from './types';
 import { sequelize } from '../../../configs';
 import InventoryRepository from './repository';
 import Product from '../products/model';
@@ -8,14 +8,16 @@ import Provider from '../providers/model';
 
 export interface IInventoryService {
   findInventory(query: Record<string, unknown>): Promise<IInventory[]>;
-  updateInventory(id: string, body: IInventoryUpdateBody): Promise<IInventory>;
+  updateInventory(id: string, body: IInventoryUpdateBody & { companyId: string }): Promise<IInventory>;
   deleteInventory(id: string): Promise<{ success: boolean }>;
   createInventory(body: IInventoryCreationBody): Promise<IInventory>;
   findInventoryById(id: string): Promise<IInventory | null>;
   findInventoryByProduct(productId: string): Promise<IInventory[]>;
   updateInventoryQuantity(productId: string, providerId: string, quantityChange: number, options?: { t?: Transaction }): Promise<IInventory>;
-  upsertInventory(productId: string, providerId: string, quantity: number, unitPrice: number, options?: { t?: Transaction }): Promise<IInventory>;
+  upsertInventory({ productId, providerId, quantity, unitPrice, companyId }: { productId: string, providerId: string, quantity: number, unitPrice: number, companyId: string }, options?: { t?: Transaction }): Promise<IInventory>;
   checkInventoryAvailability(productId: string, requiredQuantity: number): Promise<{ available: boolean; currentQuantity: number }>;
+  getInventoryStats(companyId: string): Promise<IInventoryStats>;
+  getLowStockItems(companyId: string, threshold?: number): Promise<ILowStockItem[]>;
 }
 
 export default class InventoryService implements IInventoryService {
@@ -41,7 +43,7 @@ export default class InventoryService implements IInventoryService {
     return this.convertToJson(record) as IInventory;
   }
 
-  async updateInventory(id: string, body: IInventoryUpdateBody) {
+  async updateInventory(id: string, body: IInventoryUpdateBody & { companyId: string }) {
     const record = await this._repo.update({ id }, body);
     if (!record) throw new InternalServerError('Update inventory failed');
     return this.convertToJson(record as IDataValues<IInventory>) as IInventory;
@@ -53,7 +55,8 @@ export default class InventoryService implements IInventoryService {
   }
 
   async findInventory(query: Record<string, unknown>, options?: { t: Transaction }) {
-    const records = await this._repo.find(query, {
+    const { search, ...rest } = query;
+    const records = await this._repo.find(rest, {
       ...options,
       include: [
         { model: Product },
@@ -104,9 +107,21 @@ export default class InventoryService implements IInventoryService {
     }
   }
 
-  async upsertInventory(productId: string, providerId: string, quantity: number, unitPrice: number, options?: { t?: Transaction }) {
+  async upsertInventory({
+    productId,
+    providerId,
+    quantity,
+    unitPrice,
+    companyId
+  }: {
+    productId: string,
+    providerId: string,
+    quantity: number,
+    unitPrice: number,
+    companyId: string;
+  }, options?: { t?: Transaction }) {
     // Check if inventory record exists
-    const existingInventory = await this._repo.find({ productId, providerId }, options);
+    const existingInventory = await this._repo.find({ productId, providerId, companyId }, options);
 
     if (existingInventory.length > 0) {
       // Update existing record - add to quantity
@@ -126,6 +141,7 @@ export default class InventoryService implements IInventoryService {
       const created = await this._repo.create({
         productId,
         providerId,
+        companyId,
         quantity,
         unitPrice
       }, options);
@@ -143,5 +159,103 @@ export default class InventoryService implements IInventoryService {
       available: totalQuantity >= requiredQuantity,
       currentQuantity: totalQuantity
     };
+  }
+
+  async getInventoryStats(companyId: string): Promise<IInventoryStats> {
+    // Get all inventory records with product and provider info
+    const inventoryRecords = await this._repo.find({
+      companyId
+    }, {
+      include: [
+        { model: Product },
+        { model: Provider }
+      ]
+    });
+
+    // Calculate total products (unique products)
+    const uniqueProducts = new Set(inventoryRecords.map(record => record.productId));
+    const totalProducts = uniqueProducts.size;
+
+    // Calculate total value
+    const totalValue = inventoryRecords.reduce((sum, record) => {
+      return sum + (record.quantity * record.unitPrice);
+    }, 0);
+
+    // Calculate low stock items (items with quantity <= 10)
+    const lowStockThreshold = 10;
+    const lowStockItems = inventoryRecords.filter(record => record.quantity <= lowStockThreshold).length;
+
+    // For now, we'll set recent transactions to 0
+    // This can be improved later by adding a method that doesn't create circular dependencies
+    const recentTransactions = 0;
+
+
+    return {
+      totalProducts,
+      totalValue,
+      lowStockItems,
+      recentTransactions
+    };
+  }
+
+  async getLowStockItems(companyId: string, threshold: number = 10): Promise<ILowStockItem[]> {
+    // Get all inventory records with low stock
+    const lowStockRecords = await this._repo.find({
+      companyId,
+    }, {
+      where: {
+        quantity: {
+          [Op.lte]: threshold
+        }
+      },
+      include: [
+        { model: Product },
+        { model: Provider }
+      ]
+    });
+
+    // Group by product
+    const productGroups = new Map<string, any[]>();
+    lowStockRecords.forEach(record => {
+      const productId = record.productId;
+      if (!productGroups.has(productId)) {
+        productGroups.set(productId, []);
+      }
+      productGroups.get(productId)!.push(record);
+    });
+
+    // Convert to LowStockItem format
+    const lowStockItems: ILowStockItem[] = [];
+    productGroups.forEach((records, productId) => {
+      const firstRecord = records[0];
+      const product = (firstRecord as any).product;
+
+      // Calculate total current stock for this product across all providers
+      const currentStock = records.reduce((sum, record) => sum + record.quantity, 0);
+
+      // For now, we'll use the threshold as minimum stock
+      // In a real application, this might be stored per product
+      const minimumStock = threshold;
+
+      const providers = records.map(record => {
+        const provider = (record as any).provider;
+        return {
+          providerId: record.providerId,
+          providerName: provider?.name || 'Unknown Provider',
+          quantity: record.quantity,
+          unitPrice: record.unitPrice
+        };
+      });
+
+      lowStockItems.push({
+        productId,
+        productName: product?.name || 'Unknown Product',
+        currentStock,
+        minimumStock,
+        providers
+      });
+    });
+
+    return lowStockItems;
   }
 }

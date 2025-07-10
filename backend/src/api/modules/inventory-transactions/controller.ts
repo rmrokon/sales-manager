@@ -21,7 +21,8 @@ export default class InventoryTransactionController {
       transactions = await this._service.findTransactionsByProduct(productId as string);
     } else {
       transactions = await this._service.findTransactions({
-        company_id: req?.auth?.cid,
+        // company_id: req?.auth?.cid,
+        ...req.query
       });
     }
 

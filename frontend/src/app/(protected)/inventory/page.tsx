@@ -33,17 +33,21 @@ export default function InventoryPage() {
   const [activeTab, setActiveTab] = useState('overview');
 
   // API queries
-  const { data: inventoryStats, isLoading: statsLoading, refetch: refetchStats } = useGetInventoryStatsQuery();
-  const { data: inventory, isLoading: inventoryLoading, refetch: refetchInventory } = useGetInventoryQuery({
+  const { data, isLoading: statsLoading, refetch: refetchStats } = useGetInventoryStatsQuery();
+  const inventoryStats = data?.result;
+  const { data: inventoryData, isLoading: inventoryLoading, refetch: refetchInventory } = useGetInventoryQuery({
     search: searchTerm,
   });
-  const { data: transactions, isLoading: transactionsLoading, refetch: refetchTransactions } = useGetInventoryTransactionsQuery({
+  const inventory = inventoryData?.result;
+  const { data: transactionsData, isLoading: transactionsLoading, refetch: refetchTransactions } = useGetInventoryTransactionsQuery({
     limit: 50,
-  });
-  const { data: lowStockItems, isLoading: lowStockLoading, refetch: refetchLowStock } = useGetLowStockItemsQuery({
+  }); 
+  const transactions = transactionsData?.result;
+  const { data: lowStockItemsData, isLoading: lowStockLoading, refetch: refetchLowStock } = useGetLowStockItemsQuery({
     threshold: 10,
   });
-
+  const lowStockItems = lowStockItemsData?.result;
+console.log("inventoryStats in component", {inventoryStats});
   const handleRefresh = () => {
     refetchStats();
     refetchInventory();
@@ -90,15 +94,15 @@ export default function InventoryPage() {
       header: 'Product',
       render: (_, item) => (
         <div>
-          <div className="font-medium">{item.Product?.name}</div>
-          <div className="text-sm text-muted-foreground">{item.Product?.description}</div>
+          <div className="font-medium">{item.product?.name}</div>
+          <div className="text-sm text-muted-foreground">{item.product?.description}</div>
         </div>
       ),
     },
     {
       key: 'Provider.name',
       header: 'Provider',
-      render: (_, item) => item.Provider?.name || 'N/A',
+      render: (_, item) => item.provider?.name || 'N/A',
     },
     {
       key: 'quantity',
@@ -150,7 +154,7 @@ export default function InventoryPage() {
     {
       key: 'Product.name',
       header: 'Product',
-      render: (_, transaction) => transaction.Product?.name || 'N/A',
+      render: (_, transaction) => transaction.product?.name || 'N/A',
     },
     {
       key: 'quantity',
@@ -164,15 +168,15 @@ export default function InventoryPage() {
     {
       key: 'unitPrice',
       header: 'Unit Price',
-      render: (_, transaction) => `$${transaction.unitPrice.toFixed(2)}`,
+      render: (_, transaction) => `$${Number(transaction.unitPrice).toFixed(2)}`,
     },
     {
       key: 'totalAmount',
       header: 'Total Amount',
-      render: (_, transaction) => `$${transaction.totalAmount.toFixed(2)}`,
+      render: (_, transaction) => `$${Number(transaction.totalAmount).toFixed(2)}`,
     },
   ];
-
+console.log({lowStockItems});
   // Low stock table columns
   const lowStockColumns: SimpleColumn<LowStockItem>[] = [
     {
@@ -208,7 +212,7 @@ export default function InventoryPage() {
       ),
     },
   ];
-
+console.log({transactions});
   return (
     <PageLoayout
       title="Inventory Dashboard"
@@ -230,12 +234,12 @@ export default function InventoryPage() {
           {statsCards.map((stat, index) => (
             <Card key={index}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-                <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                <CardTitle className="text-sm font-medium">{stat?.title}</CardTitle>
+                <stat.icon className={`h-4 w-4 ${stat?.color}`} />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="text-xs text-muted-foreground">{stat.description}</p>
+                <div className="text-2xl font-bold">{stat?.value}</div>
+                <p className="text-xs text-muted-foreground">{stat?.description}</p>
               </CardContent>
             </Card>
           ))}

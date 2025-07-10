@@ -8,7 +8,7 @@ import Company from '../companies/model';
 import Zone from '../zones/model';
 import Payment from '../payments/model';
 import Provider from '../providers/model';
-import { invoiceItemService, billService, inventoryService, inventoryTransactionService } from '../bootstrap';
+import { invoiceItemService, billService, inventoryService, inventoryTransactionService, paymentService } from '../bootstrap';
 import { includes } from 'lodash';
 import InvoiceItem from '../invoice-items/model';
 import Product from '../products/model';
@@ -66,6 +66,7 @@ export default class InvoiceService implements IInvoiceService {
         // Handle inventory based on invoice type
         if (invoice.type === InvoiceType.PROVIDER) {
           // Provider invoice: Add products to inventory
+          console.log({invoice})
           await this.handleProviderInvoiceInventory(invoice, items, t);
         } else if (invoice.type === InvoiceType.ZONE) {
           // Zone invoice: Deduct products from inventory
@@ -376,13 +377,13 @@ if (search) {
       if (!updatedInvoice) throw new InternalServerError('Failed to update invoice');
       
       // Create a payment record
-      await Payment.create({
+      await paymentService.createPayment({
         invoiceId,
         amount,
         paymentDate: new Date(),
         paymentMethod: 'manual', // Default method
         remarks: 'Payment recorded via API'
-      }, { transaction: t });
+      }, { t });
       
       return this.convertToJson(updatedInvoice as IDataValues<IInvoice>) as IInvoice;
     });
@@ -423,11 +424,13 @@ if (search) {
     for (const item of items) {
       // Add to inventory using upsert (create or update)
       await inventoryService.upsertInventory(
-        item.productId,
-        invoice.toProviderId,
-        item.quantity,
-        item.unitPrice,
-        { t }
+        {
+          productId: item.productId,
+          providerId: invoice.toProviderId,
+          companyId: invoice.company_id,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,},
+          { t }
       );
 
       // Create inventory transaction record

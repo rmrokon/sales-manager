@@ -12,23 +12,23 @@ export default class InventoryTransactionRepository extends DefaultRepository<In
     this._model = model;
   }
 
-  async findByInvoiceId(invoiceId: string, options?: { t?: Transaction }) {
-    return await this.find({ relatedInvoiceId: invoiceId }, options);
-  }
+  // async findByInvoiceId(invoiceId: string, options?: { t?: Transaction }) {
+  //   return await this.find({ relatedInvoiceId: invoiceId }, options);
+  // }
 
-  async findByReturnId(returnId: string, options?: { t?: Transaction }) {
-    return await this.find({ relatedReturnId: returnId }, options);
-  }
+  // async findByReturnId(returnId: string, options?: { t?: Transaction }) {
+  //   return await this.find({ relatedReturnId: returnId }, options);
+  // }
 
-  async findByProductId(productId: string, options?: { t?: Transaction }) {
-    return await this.find({ productId }, options);
-  }
+  // async findByProductId(productId: string, options?: { t?: Transaction }) {
+  //   return await this.find({ productId }, options);
+  // }
 
-  async findByProvider(providerId: string, options?: { t?: Transaction }) {
-    return await this.find({ providerId }, options);
-  }
+  // async findByProvider(providerId: string, options?: { t?: Transaction }) {
+  //   return await this.find({ providerId }, options);
+  // }
 
-  async findByZone(zoneId: string, options?: { t?: Transaction }) {
-    return await this.find({ zoneId }, options);
-  }
+  // async findByZone(zoneId: string, options?: { t?: Transaction }) {
+  //   return await this.find({ zoneId }, options);
+  // }
 }

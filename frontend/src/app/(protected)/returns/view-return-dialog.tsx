@@ -53,8 +53,8 @@ export function ViewReturnDialog({ open, onOpenChange, returnData }: ViewReturnD
     }
   };
 
-  const returnInfo = fullReturnData || returnData;
-
+  const returnInfo = fullReturnData?.result || returnData;
+  console.log({returnInfo})
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -83,14 +83,14 @@ export function ViewReturnDialog({ open, onOpenChange, returnData }: ViewReturnD
                       Original Invoice
                     </label>
                     <p className="text-sm">
-                      {returnInfo.OriginalInvoice?.invoiceNumber || 'N/A'}
+                      {returnInfo.originalInvoiceId || 'N/A'}
                     </p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">
                       Zone
                     </label>
-                    <p className="text-sm">{returnInfo.Zone?.name || 'N/A'}</p>
+                    <p className="text-sm">{returnInfo.zone?.name || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">
@@ -136,21 +136,21 @@ export function ViewReturnDialog({ open, onOpenChange, returnData }: ViewReturnD
             </Card>
 
             {/* Return Items */}
-            {fullReturnData?.ReturnItems && fullReturnData.ReturnItems.length > 0 && (
+            {returnInfo?.returnItems && returnInfo.returnItems.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle>Return Items</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {fullReturnData.ReturnItems.map((item: any, index: number) => (
+                    {returnInfo.returnItems.map((item: any, index: number) => (
                       <div
                         key={item.id}
                         className="flex items-center justify-between p-4 border rounded-lg"
                       >
                         <div className="flex-1">
                           <h4 className="font-medium">
-                            {item.Product?.name || 'Unknown Product'}
+                            {item.product?.name || 'Unknown Product'}
                           </h4>
                           <p className="text-sm text-muted-foreground">
                             Quantity: {item.returnedQuantity} × ${item.unitPrice}
