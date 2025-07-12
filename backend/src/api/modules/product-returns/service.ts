@@ -169,6 +169,7 @@ export default class ProductReturnService implements IProductReturnService {
   async findReturns(query: Record<string, unknown>, options?: { t?: Transaction }) {
     const records = await this._repo.find(query, {
       ...options,
+      order: [["createdAt", "DESC"]],
       include: [
         { model: Invoice, as: 'OriginalInvoice' },
         { model: Zone },

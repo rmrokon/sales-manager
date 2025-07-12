@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { PageLoayout } from "@/components"
 import { useGetInvoiceWithItemsQuery, useRecordPaymentMutation } from "@/store/services/invoice"
+import { useGetPaymentsQuery } from "@/store/services/payment"
+import { useGetReturnsByInvoiceQuery } from "@/store/services/returns-api"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { useParams, useRouter } from "next/navigation"
 import { InvoiceType, IInvoiceItem } from "@/utils/types/invoice"
@@ -18,6 +20,7 @@ import InvoiceTemplate from "../invoice-template"
 import { Spinner } from "@/components/ui/spinner"
 import InvoicePayments from "./invoice-payments";
 import CreatePaymentDialog from "@/app/(protected)/payments/create-payment-dialog";
+import { ReturnStatus } from "@/utils/types/returns"
 
 export default function InvoiceDetail() {
   const params = useParams()
@@ -29,6 +32,8 @@ export default function InvoiceDetail() {
   
   // Use the new query that fetches invoice with items
   const { data: invoiceWithItems, isLoading, refetch } = useGetInvoiceWithItemsQuery(invoiceId)
+  const { data: payments } = useGetPaymentsQuery({ invoiceId })
+  const { data: returns } = useGetReturnsByInvoiceQuery(invoiceId)
   const [recordPayment, { isLoading: isRecordingPayment }] = useRecordPaymentMutation()
   
   const handleRecordPayment = async () => {
@@ -83,9 +88,16 @@ export default function InvoiceDetail() {
   const invoiceData = invoiceWithItems.result
   const items: IInvoiceItem[] = invoiceData.invoiceItems || []
   const bills: IBill[] = invoiceData.bills || []
-  
-  const recipientName = invoiceData.type === InvoiceType.PROVIDER 
-    ? invoiceData.ReceiverProvider?.name 
+
+  // Calculate effective amounts considering payments and returns
+  const totalPayments = (payments || [])?.reduce((sum, payment) => sum + (payment.amount || 0), 0)
+  const totalReturns = (returns?.result || [])
+    ?.filter(returnItem => returnItem.status === ReturnStatus.APPROVED) // Only count approved returns
+    ?.reduce((sum, returnItem) => sum + (returnItem.totalReturnAmount || 0), 0)
+  const effectiveOutstanding = invoiceData.totalAmount - totalPayments - totalReturns
+
+  const recipientName = invoiceData.type === InvoiceType.PROVIDER
+    ? invoiceData.ReceiverProvider?.name
     : invoiceData.ReceiverZone?.name
   
   return (
@@ -196,18 +208,25 @@ export default function InvoiceDetail() {
               )}
               
               <div className="mt-6 flex justify-end">
-                <div className="w-64">
+                <div className="w-80">
                   <div className="flex justify-between py-2">
-                    <span className="font-medium">Total Amount:</span>
+                    <span className="font-medium">Original Amount:</span>
                     <span>{formatCurrency(invoiceData.totalAmount)}</span>
                   </div>
-                  <div className="flex justify-between py-2">
-                    <span className="font-medium">Paid Amount:</span>
-                    <span>{formatCurrency(invoiceData.paidAmount)}</span>
+                  <div className="flex justify-between py-2 text-green-600">
+                    <span className="font-medium">Total Payments:</span>
+                    <span>-{formatCurrency(totalPayments)}</span>
+                  </div>
+                  <div className="flex justify-between py-2 text-blue-600">
+                    <span className="font-medium">Total Returns:</span>
+                    <span>-{formatCurrency(totalReturns)}</span>
                   </div>
                   <div className="flex justify-between py-2 border-t border-gray-300">
-                    <span className="font-medium">Due Amount:</span>
-                    <span className="font-bold">{formatCurrency(invoiceData.dueAmount)}</span>
+                    <span className="font-medium">Outstanding Balance:</span>
+                    <span className={`font-bold ${effectiveOutstanding > 0 ? 'text-red-600' : effectiveOutstanding < 0 ? 'text-green-600' : 'text-gray-600'}`}>
+                      {formatCurrency(Math.abs(effectiveOutstanding))}
+                      {effectiveOutstanding < 0 && ' (Credit)'}
+                    </span>
                   </div>
                 </div>
               </div>

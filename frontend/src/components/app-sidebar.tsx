@@ -45,7 +45,7 @@ import { usePathname } from "next/navigation";
 const items = [
     {
         title: "Home",
-        url: "#",
+        url: "/dashboard",
         icon: Home,
         actionBtn: <></>,
         dropDown: <></>,

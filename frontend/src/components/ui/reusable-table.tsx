@@ -202,8 +202,8 @@ export function DataTable<T>({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {paginatedData.length > 0 ? (
-            paginatedData.map((row) => (
+          {paginatedData?.length > 0 ? (
+            paginatedData?.map((row) => (
               <TableRow
                 key={keyExtractor(row)}
                 className={`${onRowClick ? 'cursor-pointer hover:bg-muted/50' : ''} ${

@@ -44,10 +44,14 @@ const authSlice = createSlice({
       state.isLoggedIn = action.payload.isLoggedIn;
       state.initializing = action.payload.initializing || false;
     },
+    logout() {
+      localStorage.removeItem('accessToken');
+      return initialState;
+    }
   },
 });
 
-export const { setAuthUser } = authSlice.actions;
+export const { setAuthUser, logout } = authSlice.actions;
 
 export default authSlice.reducer;
 

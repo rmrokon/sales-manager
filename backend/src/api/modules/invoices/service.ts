@@ -330,6 +330,7 @@ if (search) {
     ...options,
     offset,
     limit: limitNumber,
+    order: [['createdAt', 'DESC']],
     include: [
       { model: Provider, as: 'ReceiverProvider' },
       { model: Zone, as: 'ReceiverZone' }
