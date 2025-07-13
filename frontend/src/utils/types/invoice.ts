@@ -1,19 +1,25 @@
+import { StdioNull } from 'child_process';
 import { IBill } from './bill';
 
 export enum InvoiceType {
   PROVIDER = 'provider',
   ZONE = 'zone',
+  COMPANY = 'company',
 }
 
 export interface IInvoice {
   id: string;
+  invoiceNumber: string;
   type: InvoiceType;
   fromUserId: string;
-  toProviderId?: string;
-  toZoneId?: string;
+  toProviderId?: string | null;
+  toZoneId?: string | null;
   totalAmount: number;
   paidAmount: number;
   dueAmount: number;
+  invoiceDate: string;
+  discountType?: 'percentage' | 'amount';
+  discountValue?: number;
   createdAt: string;
   updatedAt: string;
   ReceiverProvider?: {
@@ -35,7 +41,7 @@ export interface IInvoiceItem {
   discountPercent: number;
   createdAt: string;
   updatedAt: string;
-  Product?: {
+  product?: {
     id: string;
     name: string;
     price: number;

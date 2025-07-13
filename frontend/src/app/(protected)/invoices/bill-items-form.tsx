@@ -85,8 +85,8 @@ export default function BillItemsForm({ items, onChange }: BillItemsFormProps) {
                         step="0.01"
                         min="0"
                         placeholder="0.00"
-                        value={item.amount || 0}
-                        onChange={(e) => handleItemChange(index, "amount", parseFloat(e.target.value) || 0)}
+                        value={item.amount === 0 ? '' : item.amount || ''}
+                        onChange={(e) => handleItemChange(index, "amount", e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                         className="text-right"
                         required
                       />

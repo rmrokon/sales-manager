@@ -1,12 +1,12 @@
 import { storeApiConfig } from "../api-config";
-import { IInvoice, InvoiceType, IInvoiceItem } from "@/utils/types/invoice";
+import { InvoiceType, IInvoiceItem } from "@/utils/types/invoice";
 import { IBill } from "@/utils/types/bill";
 
 export interface InvoiceCreateParams {
   type: InvoiceType;
   fromUserId: string;
-  toProviderId?: string;
-  toZoneId?: string;
+  toProviderId?: string | null;
+  toZoneId?: string | null;
   totalAmount: number;
   paidAmount: number;
   dueAmount: number;

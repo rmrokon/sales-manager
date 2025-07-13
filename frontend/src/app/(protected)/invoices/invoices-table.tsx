@@ -14,7 +14,7 @@ export default function InvoicesTable() {
 
     // Transform filter values for API
     const getApiFilters = () => {
-        const apiFilters: Record<string, any> = {};
+        const apiFilters: Record<string, unknown> = {};
 
         Object.entries(filterValues).forEach(([key, value]) => {
             if (key === 'dateRange' && value?.from) {
@@ -86,7 +86,7 @@ export default function InvoicesTable() {
         {
             type: 'date',
             key: 'date',
-            label: 'Created Date',
+            label: 'Invoice Date',
             mode: 'single'
         },
         {
@@ -99,9 +99,14 @@ export default function InvoicesTable() {
 
     const columns: SimpleColumn<IInvoice>[] = [
         {
-            key: 'id',
-            header: 'ID',
-            className: 'font-medium truncate max-w-[100px]'
+            key: 'invoiceNumber',
+            header: 'Invoice Number',
+            className: 'font-medium',
+            render: (value) => (
+                <span className="font-mono text-sm bg-foreground text-background px-2 py-1 rounded">
+                    {String(value)}
+                </span>
+            )
         },
         {
             key: 'type',
@@ -118,6 +123,9 @@ export default function InvoicesTable() {
                 }
                 if (invoice.type === InvoiceType.ZONE && invoice.ReceiverZone) {
                     return invoice.ReceiverZone.name;
+                }
+                if (invoice.type === InvoiceType.COMPANY) {
+                    return "Company (Internal)";
                 }
                 return "Unknown";
             }
@@ -138,8 +146,8 @@ export default function InvoicesTable() {
             render: (value) => formatCurrency(value as number)
         },
         {
-            key: 'createdAt',
-            header: 'Created At',
+            key: 'invoiceDate',
+            header: 'Invoice Date',
             render: (value) => new Date(value as string).toLocaleDateString()
         }
     ];

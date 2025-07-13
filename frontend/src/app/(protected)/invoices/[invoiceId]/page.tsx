@@ -84,6 +84,8 @@ export default function InvoiceDetail() {
   if (!invoiceWithItems?.result) {
     return <div>Invoice not found</div>
   }
+
+  console.log({invoiceWithItems});
   
   const invoiceData = invoiceWithItems.result
   const items: IInvoiceItem[] = invoiceData.invoiceItems || []
@@ -98,11 +100,13 @@ export default function InvoiceDetail() {
 
   const recipientName = invoiceData.type === InvoiceType.PROVIDER
     ? invoiceData.ReceiverProvider?.name
-    : invoiceData.ReceiverZone?.name
+    : invoiceData.type === InvoiceType.ZONE
+    ? invoiceData.ReceiverZone?.name
+    : "Company (Internal)"
   
   return (
-    <PageLoayout 
-      title={`Invoice #${invoiceId.substring(0, 8)}`}
+    <PageLoayout
+      title={`Invoice ${invoiceData.invoiceNumber}`}
       buttons={[
         <Button key="back" variant="outline" onClick={() => router.back()}>
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -126,16 +130,25 @@ export default function InvoiceDetail() {
         <div className="print:hidden">
           <Card>
             <CardHeader>
-              <CardTitle>Invoice Details</CardTitle>
+              <CardTitle className="flex items-center justify-between">
+                <span>Invoice Details</span>
+                <span className="font-mono text-lg bg-blue-100 text-blue-800 px-3 py-1 rounded">
+                  {invoiceData.invoiceNumber}
+                </span>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <h3 className="font-semibold">Invoice Information</h3>
                   <div className="mt-2 space-y-1">
+                    <p><span className="text-muted-foreground">Invoice Number:</span>
+                      <span className="font-mono ml-2 bg-foreground text-background px-2 py-1 rounded text-sm">
+                        {invoiceData.invoiceNumber}
+                      </span>
+                    </p>
                     <p><span className="text-muted-foreground">Type:</span> {invoiceData.type}</p>
                     <p><span className="text-muted-foreground">Date:</span> {formatDate(invoiceData.createdAt)}</p>
-                    <p><span className="text-muted-foreground">Invoice ID:</span> {invoiceData.id}</p>
                   </div>
                 </div>
                 <div>
@@ -209,10 +222,49 @@ export default function InvoiceDetail() {
               
               <div className="mt-6 flex justify-end">
                 <div className="w-80">
-                  <div className="flex justify-between py-2">
-                    <span className="font-medium">Original Amount:</span>
-                    <span>{formatCurrency(invoiceData.totalAmount)}</span>
-                  </div>
+                  {/* Calculate subtotal before discount */}
+                  {(() => {
+                    const subtotal = items.reduce((sum, item) =>
+                      sum + (item.quantity * item.unitPrice * (1 - item.discountPercent / 100)), 0
+                    ) + bills.reduce((sum, bill) => sum + bill.amount, 0);
+
+                    const hasDiscount = invoiceData.discountValue && invoiceData.discountValue > 0;
+                    const discountAmount = hasDiscount ? (
+                      invoiceData.discountType === 'percentage'
+                        ? (subtotal * invoiceData.discountValue) / 100
+                        : invoiceData.discountValue
+                    ) : 0;
+
+                    return (
+                      <>
+                        {hasDiscount && (
+                          <>
+                            <div className="flex justify-between py-2">
+                              <span className="font-medium">Subtotal:</span>
+                              <span>{formatCurrency(subtotal)}</span>
+                            </div>
+                            <div className="flex justify-between py-2 text-orange-600">
+                              <span className="font-medium">
+                                Discount ({invoiceData.discountType === 'percentage' ? `${invoiceData.discountValue}%` : 'Amount'}):
+                              </span>
+                              <span>-{formatCurrency(discountAmount)}</span>
+                            </div>
+                            <div className="flex justify-between py-2 border-t border-gray-200">
+                              <span className="font-medium">Total After Discount:</span>
+                              <span>{formatCurrency(invoiceData.totalAmount)}</span>
+                            </div>
+                          </>
+                        )}
+                        {!hasDiscount && (
+                          <div className="flex justify-between py-2">
+                            <span className="font-medium">Total Amount:</span>
+                            <span>{formatCurrency(invoiceData.totalAmount)}</span>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+
                   <div className="flex justify-between py-2 text-green-600">
                     <span className="font-medium">Total Payments:</span>
                     <span>-{formatCurrency(totalPayments)}</span>

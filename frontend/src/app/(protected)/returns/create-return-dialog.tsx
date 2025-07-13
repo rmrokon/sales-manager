@@ -24,6 +24,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { ErrorMessage } from '@/components/ui/error';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Plus, Trash2 } from 'lucide-react';
 import { useCreateReturnMutation } from '@/store/services/returns-api';
 import { toast } from '@/hooks/use-toast';
@@ -46,6 +47,9 @@ const createReturnSchema = z.object({
   remarks: z.string().optional(),
   returnItems: z.array(returnItemSchema).min(1, 'At least one return item is required'),
   paymentAmount: z.number().min(0, 'Payment amount cannot be negative').optional(),
+  returnDate: z.string({
+    required_error: "Return date is required"
+  }),
 });
 
 type CreateReturnFormData = z.infer<typeof createReturnSchema>;
@@ -80,12 +84,13 @@ export function CreateReturnDialog({ open, onOpenChange }: CreateReturnDialogPro
       returnItems: [
         {
           productId: '',
-          returnedQuantity: 1,
-          unitPrice: 0,
+          returnedQuantity: undefined,
+          unitPrice: undefined,
           returnAmount: 0,
         },
       ],
-      paymentAmount: 0,
+      paymentAmount: undefined,
+      returnDate: new Date().toISOString().split('T')[0],
     },
   });
 
@@ -186,6 +191,21 @@ export function CreateReturnDialog({ open, onOpenChange }: CreateReturnDialogPro
               />
               {errors.paymentAmount && (
                 <ErrorMessage message={errors.paymentAmount.message ?? ""} />
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <DatePicker
+                label="Return Date"
+                id="returnDate"
+                value={watch('returnDate') ? new Date(watch('returnDate')) : undefined}
+                onChange={(date) => {
+                  setValue('returnDate', date ? date.toISOString().split('T')[0] : '')
+                }}
+                placeholder="Select return date"
+              />
+              {errors.returnDate && (
+                <ErrorMessage message={errors.returnDate.message ?? ""} />
               )}
             </div>
           </div>

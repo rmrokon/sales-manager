@@ -28,29 +28,30 @@ export default function InvoiceItemsForm({ items, onChange, invoiceId }: Invoice
   const { data: productsData, isLoading } = useGetProductsQuery({})
   const [newItem, setNewItem] = useState<InvoiceItem>({
     productId: '',
-    quantity: 1,
+    quantity: 0,
     unitPrice: 0,
     discountPercent: 0
   })
 
   const handleAddItem = () => {
     if (!newItem.productId) return
-    
+
     // Find the product to get its price
     const product = productsData?.result.find(p => p.id === newItem.productId)
     if (product) {
       // Use the product's price as the unit price if not specified
       const itemToAdd = {
         ...newItem,
+        quantity: newItem.quantity || 1, // Default to 1 if 0
         unitPrice: newItem.unitPrice || product.price
       }
-      
+
       onChange([...items, itemToAdd])
       
       // Reset the form
       setNewItem({
         productId: '',
-        quantity: 1,
+        quantity: 0,
         unitPrice: 0,
         discountPercent: 0
       })
@@ -147,8 +148,9 @@ export default function InvoiceItemsForm({ items, onChange, invoiceId }: Invoice
                 id="quantity"
                 type="number"
                 min="1"
-                value={newItem.quantity}
-                onChange={(e) => setNewItem({...newItem, quantity: parseInt(e.target.value) || 1})}
+                defaultValue={0}
+                // value={newItem.quantity === 0 ? '' : newItem.quantity}
+                onChange={(e) => setNewItem({...newItem, quantity: e.target.value === '' ? 0 : parseInt(e.target.value) || 0})}
               />
             </div>
             
@@ -159,8 +161,8 @@ export default function InvoiceItemsForm({ items, onChange, invoiceId }: Invoice
                 type="number"
                 step="0.01"
                 min="0"
-                value={newItem.unitPrice}
-                onChange={(e) => setNewItem({...newItem, unitPrice: parseFloat(e.target.value) || 0})}
+                value={newItem.unitPrice === 0 ? '' : newItem.unitPrice}
+                onChange={(e) => setNewItem({...newItem, unitPrice: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0})}
               />
             </div>
             
@@ -171,8 +173,8 @@ export default function InvoiceItemsForm({ items, onChange, invoiceId }: Invoice
                 type="number"
                 min="0"
                 max="100"
-                value={newItem.discountPercent}
-                onChange={(e) => setNewItem({...newItem, discountPercent: parseFloat(e.target.value) || 0})}
+                value={newItem.discountPercent === 0 ? '' : newItem.discountPercent}
+                onChange={(e) => setNewItem({...newItem, discountPercent: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0})}
               />
             </div>
             
