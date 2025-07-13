@@ -11,14 +11,14 @@ export const BulkBillCreationValidationSchema = z.array(z.object({
 }));
 
 export const InvoiceCreationValidationSchema = z.object({
-  type: z.enum([InvoiceType.PROVIDER, InvoiceType.ZONE], {
+  type: z.enum([InvoiceType.PROVIDER, InvoiceType.ZONE, InvoiceType.COMPANY], {
     required_error: 'Invoice type is required',
-    invalid_type_error: 'Invoice type must be either "company" or "zone"'
+    invalid_type_error: 'Invoice type must be either "provider", "zone", or "company"'
   }),
   fromUserId: z.string({required_error: 'Sender user ID is required'}),
-  toProviderId: z.string().optional(),
+  toProviderId: z.string().optional().nullable(),
   company_id: z.string().optional(),
-  toZoneId: z.string().optional(),
+  toZoneId: z.string().optional().nullable(),
   totalAmount: z.number({required_error: 'Total amount is required'})
     .min(0, 'Total amount cannot be negative'),
   paidAmount: z.number({required_error: 'Paid amount is required'})
@@ -26,16 +26,20 @@ export const InvoiceCreationValidationSchema = z.object({
     .default(0),
   dueAmount: z.number({required_error: 'Due amount is required'})
     .min(0, 'Due amount cannot be negative'),
+  invoiceDate: z.string().optional(),
+  discountType: z.enum(['percentage', 'amount']).optional(),
+  discountValue: z.number().min(0, 'Discount value cannot be negative').optional(),
   items: BulkInvoiceItemCreationValidationSchema.optional(),
   bills: BulkBillCreationValidationSchema.optional(),
 }).refine(data => {
-  // Ensure either toCompanyId or toZoneId is provided based on type
+  // Ensure proper recipient is provided based on type
   if (data.type === InvoiceType.PROVIDER && !data.toProviderId) {
     return false;
   }
   if (data.type === InvoiceType.ZONE && !data.toZoneId) {
     return false;
   }
+  // Company invoices don't need a specific recipient
   return true;
 }, {
   message: 'Provider invoice must have toProviderId, Zone invoice must have toZoneId',

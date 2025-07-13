@@ -9,6 +9,7 @@ import Bill from '../bills/model';
 
 export default class Invoice extends Model<InferAttributes<Invoice>, InferCreationAttributes<Invoice>> {
   declare id: CreationOptional<string>;
+  declare invoiceNumber: CreationOptional<string>;
   declare type: InvoiceType;
   declare fromUserId: string;
   declare toProviderId: CreationOptional<string>;
@@ -17,6 +18,9 @@ export default class Invoice extends Model<InferAttributes<Invoice>, InferCreati
   declare totalAmount: number;
   declare paidAmount: number;
   declare dueAmount: number;
+  declare invoiceDate: CreationOptional<Date>;
+  declare discountType: CreationOptional<'percentage' | 'amount'>;
+  declare discountValue: CreationOptional<number>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
 }
@@ -29,6 +33,12 @@ Invoice.init(
       primaryKey: true,
       type: DataTypes.UUID,
       defaultValue: sql.uuidV4,
+    },
+    invoiceNumber: {
+      field: 'invoice_number',
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true, // ensures no duplicates
     },
     type: {
       type: DataTypes.ENUM(...Object.values(InvoiceType)),
@@ -77,6 +87,24 @@ Invoice.init(
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
     },
+    invoiceDate: {
+      field: 'invoice_date',
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+    discountType: {
+      field: 'discount_type',
+      type: DataTypes.ENUM('percentage', 'amount'),
+      allowNull: true,
+      defaultValue: null,
+    },
+    discountValue: {
+      field: 'discount_value',
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+      defaultValue: 0,
+    },
     createdAt: {
       field: 'created_at',
       type: DataTypes.DATE,
@@ -97,14 +125,39 @@ Invoice.init(
     sequelize,
     paranoid: true,
     hooks: {
-      beforeValidate: (invoice: Invoice) => {
-        // Ensure either toCompanyId or toZoneId is set based on type
+      // beforeCreate: async (invoice: Invoice) => {
+        
+      // },
+      beforeValidate: async (invoice: Invoice) => {
+        // Ensure proper recipient is set based on type
         if (invoice.type === InvoiceType.PROVIDER && !invoice.toProviderId) {
           throw new Error('Provider invoice must have a toProviderId');
         }
         if (invoice.type === InvoiceType.ZONE && !invoice.toZoneId) {
           throw new Error('Zone invoice must have a toZoneId');
         }
+        // Company invoices don't need a specific recipient as they are internal
+
+        // Generate invoice number
+        const [result] = await sequelize.query(`SELECT nextval('invoice_number_seq') AS seq`);
+        const seq = String((result[0] as any).seq).padStart(6, '0');
+        let prefix: string;
+
+        switch (invoice.type) {
+          case InvoiceType.ZONE:
+            prefix = 'ZN';
+            break;
+          case InvoiceType.PROVIDER:
+            prefix = 'PV';
+            break;
+          case InvoiceType.COMPANY:
+            prefix = 'CO';
+            break;
+          default:
+            prefix = 'IN';
+        }
+
+        invoice.invoiceNumber = `${prefix}-${new Date().getFullYear()}-${seq}`;
       }
     }
   },

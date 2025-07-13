@@ -25,4 +25,5 @@ export type IInvoiceUpdateBody = z.infer<typeof InvoiceUpdateValidationSchema>;
 export enum InvoiceType {
   PROVIDER = 'provider',
   ZONE = 'zone',
+  COMPANY = 'company',
 }
