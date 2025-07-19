@@ -1,46 +1,45 @@
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { Delete } from "lucide-react"
 import { useGetCompaniesQuery } from "@/store/services/company"
 import { ICompany } from "@/utils/types/company"
-import { Spinner } from "@/components/ui/spinner"
+import { DataTable, SimpleColumn, ActionButton } from "@/components/ui/reusable-table"
+import { Trash } from "lucide-react"
 
 
 export default function CompaniesTable() {
-    const {data, isLoading} = useGetCompaniesQuery({});
-    if(isLoading) return <Spinner />;
+    const { data, isLoading } = useGetCompaniesQuery({});
+
+    const columns: SimpleColumn<ICompany>[] = [
+        {
+            key: 'name',
+            header: 'Name',
+            className: 'font-medium'
+        },
+        {
+            key: 'createdAt',
+            header: 'Created At',
+            render: (value) => new Date(value as string).toLocaleDateString()
+        }
+    ];
+
+    const actions: ActionButton<ICompany>[] = [
+        {
+            type: 'delete',
+            icon: <Trash className="h-4 w-4" />,
+            onClick: (company) => {
+                // TODO: Implement delete functionality
+                console.log('Delete company:', company.id);
+            },
+            confirmMessage: "Are you sure you want to delete this company?"
+        }
+    ];
+
     return (
-        <Table>
-            {/* <TableCaption>A list of your recent invoices.</TableCaption> */}
-            <TableHeader>
-                <TableRow>
-                    <TableHead className="">Name</TableHead>
-                    <TableHead>Created At</TableHead>
-                    <TableHead className="text-center">Actions</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {
-                    data?.result.map((company: ICompany) => (
-                        <TableRow key={company.id}>
-                            <TableCell className="font-medium">{company.name}</TableCell>
-                            <TableCell>{new Date(company.createdAt).toLocaleDateString()}</TableCell>
-                            <TableCell className="text-center">
-                                <Button variant="destructive" size="icon">
-                                    <Delete />
-                                </Button>
-                            </TableCell>
-                        </TableRow>
-                    ))
-                }
-            </TableBody>
-        </Table>
+        <DataTable
+            data={data?.result || []}
+            columns={columns}
+            actions={actions}
+            isLoading={isLoading}
+            keyExtractor={(company) => company.id}
+            emptyMessage="No companies found"
+        />
     )
 }

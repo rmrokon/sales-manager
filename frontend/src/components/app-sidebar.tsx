@@ -22,7 +22,7 @@ import { RootState } from "@/store/store";
 import { changeTheme, ThemeState } from "@/store/reducers/theme.reducer";
 import { useEffect } from "react";
 import { setAuthUser } from "@/store/reducers/auth.reducer";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 // import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 
 // const dropDown = <DropdownMenu>
@@ -45,7 +45,7 @@ import { usePathname } from "next/navigation";
 const items = [
     {
         title: "Home",
-        url: "#",
+        url: "/dashboard",
         icon: Home,
         actionBtn: <></>,
         dropDown: <></>,
@@ -120,6 +120,7 @@ export default function AppSidebar() {
     const theme = useSelector((state: RootState) => state.theme.theme);
     const { company, user } = useSelector((state: RootState) => state.auth);
     const pathname = usePathname();
+    const router = useRouter();
     const dispatch = useDispatch();
     const handleChangeTheme = (themeInput: ThemeState["theme"]) => {
         localStorage.setItem('theme', themeInput);
@@ -135,6 +136,7 @@ export default function AppSidebar() {
     const handleSignOut = () => {
         localStorage.removeItem('accessToken');
         dispatch(setAuthUser({}));
+        router.replace("/login");
     }
 
     useEffect(() => {

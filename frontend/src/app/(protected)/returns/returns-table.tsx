@@ -17,6 +17,7 @@ interface ProductReturn {
   totalReturnAmount: number;
   status: 'pending' | 'approved' | 'rejected';
   remarks?: string;
+  returnDate: string;
   createdAt: string;
   zone?: {
     name: string;
@@ -111,8 +112,8 @@ console.log('returns =====> ', {returns})
       render: (value) => getStatusBadge(value as string),
     },
     {
-      key: 'createdAt',
-      header: 'Created At',
+      key: 'returnDate',
+      header: 'Return Date',
       render: (value) => format(new Date(value as string), 'MMM dd, yyyy'),
     },
   ];
@@ -144,7 +145,7 @@ console.log('returns =====> ', {returns})
   return (
     <>
       <DataTable
-        data={returns.result}
+        data={(Array.isArray(returns) ? returns : returns?.result || []) as unknown as ProductReturn[]}
         columns={columns}
         actions={actions}
         isLoading={isLoading}

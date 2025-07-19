@@ -56,7 +56,7 @@ export default function ProductForm({ defaultValues, onSuccess }: ProductFormPro
         reValidateMode: 'onChange',
         defaultValues: {
           name: defaultValues?.name || '',
-          price: defaultValues?.price || 0,
+          price: defaultValues?.price || undefined,
           description: defaultValues?.description || '',
           providerIds: []
         }

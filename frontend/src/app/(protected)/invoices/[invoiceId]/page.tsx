@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { PageLoayout } from "@/components"
 import { useGetInvoiceWithItemsQuery, useRecordPaymentMutation } from "@/store/services/invoice"
+import { useGetPaymentsQuery } from "@/store/services/payment"
+import { useGetReturnsByInvoiceQuery } from "@/store/services/returns-api"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { useParams, useRouter } from "next/navigation"
 import { InvoiceType, IInvoiceItem } from "@/utils/types/invoice"
@@ -18,6 +20,7 @@ import InvoiceTemplate from "../invoice-template"
 import { Spinner } from "@/components/ui/spinner"
 import InvoicePayments from "./invoice-payments";
 import CreatePaymentDialog from "@/app/(protected)/payments/create-payment-dialog";
+import { ReturnStatus } from "@/utils/types/returns"
 
 export default function InvoiceDetail() {
   const params = useParams()
@@ -29,6 +32,8 @@ export default function InvoiceDetail() {
   
   // Use the new query that fetches invoice with items
   const { data: invoiceWithItems, isLoading, refetch } = useGetInvoiceWithItemsQuery(invoiceId)
+  const { data: payments } = useGetPaymentsQuery({ invoiceId })
+  const { data: returns } = useGetReturnsByInvoiceQuery(invoiceId)
   const [recordPayment, { isLoading: isRecordingPayment }] = useRecordPaymentMutation()
   
   const handleRecordPayment = async () => {
@@ -79,18 +84,29 @@ export default function InvoiceDetail() {
   if (!invoiceWithItems?.result) {
     return <div>Invoice not found</div>
   }
+
+  console.log({invoiceWithItems});
   
   const invoiceData = invoiceWithItems.result
   const items: IInvoiceItem[] = invoiceData.invoiceItems || []
   const bills: IBill[] = invoiceData.bills || []
-  
-  const recipientName = invoiceData.type === InvoiceType.PROVIDER 
-    ? invoiceData.ReceiverProvider?.name 
-    : invoiceData.ReceiverZone?.name
+
+  // Calculate effective amounts considering payments and returns
+  const totalPayments = (payments || [])?.reduce((sum, payment) => sum + (payment.amount || 0), 0)
+  const totalReturns = (returns?.result || [])
+    ?.filter(returnItem => returnItem.status === ReturnStatus.APPROVED) // Only count approved returns
+    ?.reduce((sum, returnItem) => sum + (returnItem.totalReturnAmount || 0), 0)
+  const effectiveOutstanding = invoiceData.totalAmount - totalPayments - totalReturns
+
+  const recipientName = invoiceData.type === InvoiceType.PROVIDER
+    ? invoiceData.ReceiverProvider?.name
+    : invoiceData.type === InvoiceType.ZONE
+    ? invoiceData.ReceiverZone?.name
+    : "Company (Internal)"
   
   return (
-    <PageLoayout 
-      title={`Invoice #${invoiceId.substring(0, 8)}`}
+    <PageLoayout
+      title={`Invoice ${invoiceData.invoiceNumber}`}
       buttons={[
         <Button key="back" variant="outline" onClick={() => router.back()}>
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -114,16 +130,25 @@ export default function InvoiceDetail() {
         <div className="print:hidden">
           <Card>
             <CardHeader>
-              <CardTitle>Invoice Details</CardTitle>
+              <CardTitle className="flex items-center justify-between">
+                <span>Invoice Details</span>
+                <span className="font-mono text-lg bg-blue-100 text-blue-800 px-3 py-1 rounded">
+                  {invoiceData.invoiceNumber}
+                </span>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <h3 className="font-semibold">Invoice Information</h3>
                   <div className="mt-2 space-y-1">
+                    <p><span className="text-muted-foreground">Invoice Number:</span>
+                      <span className="font-mono ml-2 bg-foreground text-background px-2 py-1 rounded text-sm">
+                        {invoiceData.invoiceNumber}
+                      </span>
+                    </p>
                     <p><span className="text-muted-foreground">Type:</span> {invoiceData.type}</p>
                     <p><span className="text-muted-foreground">Date:</span> {formatDate(invoiceData.createdAt)}</p>
-                    <p><span className="text-muted-foreground">Invoice ID:</span> {invoiceData.id}</p>
                   </div>
                 </div>
                 <div>
@@ -196,18 +221,64 @@ export default function InvoiceDetail() {
               )}
               
               <div className="mt-6 flex justify-end">
-                <div className="w-64">
-                  <div className="flex justify-between py-2">
-                    <span className="font-medium">Total Amount:</span>
-                    <span>{formatCurrency(invoiceData.totalAmount)}</span>
+                <div className="w-80">
+                  {/* Calculate subtotal before discount */}
+                  {(() => {
+                    const subtotal = items.reduce((sum, item) =>
+                      sum + (item.quantity * item.unitPrice * (1 - item.discountPercent / 100)), 0
+                    ) + bills.reduce((sum, bill) => sum + bill.amount, 0);
+
+                    const hasDiscount = invoiceData.discountValue && invoiceData.discountValue > 0;
+                    const discountAmount = hasDiscount ? (
+                      invoiceData.discountType === 'percentage'
+                        ? (subtotal * invoiceData.discountValue) / 100
+                        : invoiceData.discountValue
+                    ) : 0;
+
+                    return (
+                      <>
+                        {hasDiscount && (
+                          <>
+                            <div className="flex justify-between py-2">
+                              <span className="font-medium">Subtotal:</span>
+                              <span>{formatCurrency(subtotal)}</span>
+                            </div>
+                            <div className="flex justify-between py-2 text-orange-600">
+                              <span className="font-medium">
+                                Discount ({invoiceData.discountType === 'percentage' ? `${invoiceData.discountValue}%` : 'Amount'}):
+                              </span>
+                              <span>-{formatCurrency(discountAmount)}</span>
+                            </div>
+                            <div className="flex justify-between py-2 border-t border-gray-200">
+                              <span className="font-medium">Total After Discount:</span>
+                              <span>{formatCurrency(invoiceData.totalAmount)}</span>
+                            </div>
+                          </>
+                        )}
+                        {!hasDiscount && (
+                          <div className="flex justify-between py-2">
+                            <span className="font-medium">Total Amount:</span>
+                            <span>{formatCurrency(invoiceData.totalAmount)}</span>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+
+                  <div className="flex justify-between py-2 text-green-600">
+                    <span className="font-medium">Total Payments:</span>
+                    <span>-{formatCurrency(totalPayments)}</span>
                   </div>
-                  <div className="flex justify-between py-2">
-                    <span className="font-medium">Paid Amount:</span>
-                    <span>{formatCurrency(invoiceData.paidAmount)}</span>
+                  <div className="flex justify-between py-2 text-blue-600">
+                    <span className="font-medium">Total Returns:</span>
+                    <span>-{formatCurrency(totalReturns)}</span>
                   </div>
                   <div className="flex justify-between py-2 border-t border-gray-300">
-                    <span className="font-medium">Due Amount:</span>
-                    <span className="font-bold">{formatCurrency(invoiceData.dueAmount)}</span>
+                    <span className="font-medium">Outstanding Balance:</span>
+                    <span className={`font-bold ${effectiveOutstanding > 0 ? 'text-red-600' : effectiveOutstanding < 0 ? 'text-green-600' : 'text-gray-600'}`}>
+                      {formatCurrency(Math.abs(effectiveOutstanding))}
+                      {effectiveOutstanding < 0 && ' (Credit)'}
+                    </span>
                   </div>
                 </div>
               </div>

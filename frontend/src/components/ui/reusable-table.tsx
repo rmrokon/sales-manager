@@ -187,8 +187,8 @@ export function DataTable<T>({
         />
       )}
 
-      <div className="rounded-md border">
-        <Table>
+      <div className="rounded-md border overflow-x-auto">
+        <Table className="min-w-full text-sm sm:text-base">
         <TableHeader>
           <TableRow>
             {columns.map((column, index) => (
@@ -202,8 +202,8 @@ export function DataTable<T>({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {paginatedData.length > 0 ? (
-            paginatedData.map((row) => (
+          {paginatedData?.length > 0 ? (
+            paginatedData?.map((row) => (
               <TableRow
                 key={keyExtractor(row)}
                 className={`${onRowClick ? 'cursor-pointer hover:bg-muted/50' : ''} ${
@@ -218,7 +218,7 @@ export function DataTable<T>({
                 ))}
                 {hasActions && (
                   <TableCell className="text-center">
-                    <div className="flex justify-center gap-2">
+                    <div className="flex justify-center gap-1 sm:gap-2 flex-wrap">
                       {customActions && customActions(row)}
                       {actions.map((action, actionIndex) => {
                         const isDisabled = action.disabled?.(row) || false

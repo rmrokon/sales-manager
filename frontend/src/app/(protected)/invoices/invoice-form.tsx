@@ -1,12 +1,13 @@
 "use client"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
 import { ErrorMessage } from "@/components/ui/error"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import { DatePicker } from "@/components/ui/date-picker"
+import { DiscountInput, DiscountValue, applyDiscount } from "@/components/ui/discount-input"
 import { useToast } from "@/hooks/use-toast"
 import { isRtkQueryError } from "@/lib/utils"
 import { useCreateInvoiceMutation, useUpdateInvoiceMutation } from "@/store/services/invoice"
@@ -25,14 +26,14 @@ import { IProvider } from "@/utils/types/provider"
 import BillItemsForm from "./bill-items-form"
 
 const invoiceSchema = z.object({
-  type: z.enum([InvoiceType.PROVIDER, InvoiceType.ZONE], {
+  type: z.enum([InvoiceType.PROVIDER, InvoiceType.ZONE, InvoiceType.COMPANY], {
     required_error: "Invoice type is required"
   }),
   fromUserId: z.string({
     required_error: "Sender user ID is required"
   }),
-  toProviderId: z.string().optional(),
-  toZoneId: z.string().optional(),
+  toProviderId: z.string().optional().nullable(),
+  toZoneId: z.string().optional().nullable(),
   totalAmount: z.number({
     required_error: "Total amount is required"
   }).min(0, "Total amount cannot be negative"),
@@ -41,7 +42,12 @@ const invoiceSchema = z.object({
   }).min(0, "Paid amount cannot be negative").default(0),
   dueAmount: z.number({
     required_error: "Due amount is required"
-  }).min(0, "Due amount cannot be negative")
+  }).min(0, "Due amount cannot be negative"),
+  invoiceDate: z.string({
+    required_error: "Invoice date is required"
+  }),
+  discountType: z.enum(['percentage', 'amount']).default('percentage'),
+  discountValue: z.number().min(0, "Discount cannot be negative").default(0)
 }).refine(data => {
   if (data.type === InvoiceType.PROVIDER && !data.toProviderId) {
     return false;
@@ -76,9 +82,11 @@ export default function InvoiceForm({ defaultValues, onSuccess }: InvoiceFormPro
   const { toast } = useToast();
   const router = useRouter();
   
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [lineItems, setLineItems] = useState<any[]>([]);
   const [totalAmount, setTotalAmount] = useState(0);
   const [isBill, setIsBill] = useState(false);
+  const [discount, setDiscount] = useState<DiscountValue>({ type: 'percentage', value: 0 });
   
   const isEditing = Boolean(defaultValues?.id);
   const isLoading = isCreating || isUpdating || isLoadingProviders || isLoadingZones;
@@ -99,28 +107,46 @@ export default function InvoiceForm({ defaultValues, onSuccess }: InvoiceFormPro
       toProviderId: defaultValues?.toProviderId || '',
       toZoneId: defaultValues?.toZoneId || '',
       totalAmount: defaultValues?.totalAmount || 0,
-      paidAmount: defaultValues?.paidAmount || 0,
-      dueAmount: defaultValues?.dueAmount || 0
+      paidAmount: defaultValues?.paidAmount || undefined,
+      dueAmount: defaultValues?.dueAmount || 0,
+      invoiceDate: defaultValues?.invoiceDate
+        ? new Date(defaultValues.invoiceDate).toISOString().split('T')[0]
+        : new Date().toISOString().split('T')[0],
+      discountType: defaultValues?.discountType || 'percentage',
+      discountValue: defaultValues?.discountValue || 0
     }
   });
   
   const invoiceType = watch('type');
   const paidAmount = watch('paidAmount');
-  
+
+  // Automatically set bill mode for company invoices
+  useEffect(() => {
+    if (invoiceType === InvoiceType.COMPANY) {
+      setIsBill(true);
+    } else {
+      // Allow manual toggle for provider and zone invoices
+      // Don't automatically set to false to preserve user choice
+    }
+  }, [invoiceType]);
+
   // Update total amount when line items change
   useEffect(() => {
-    const total = lineItems.reduce((sum, item) => {
+    const subtotal = lineItems.reduce((sum, item) => {
       if (isBill) {
         return sum + (item.amount || 0);
       }
       const itemTotal = item.quantity * item.unitPrice * (1 - (item.discountPercent / 100));
       return sum + itemTotal;
     }, 0);
-    
-    setTotalAmount(total);
-    setValue('totalAmount', total);
-    setValue('dueAmount', total - (paidAmount || 0));
-  }, [lineItems, paidAmount, setValue, isBill]);
+
+    // Apply overall discount
+    const finalTotal = applyDiscount(discount, subtotal);
+
+    setTotalAmount(finalTotal);
+    setValue('totalAmount', finalTotal);
+    setValue('dueAmount', finalTotal - (paidAmount || 0));
+  }, [lineItems, paidAmount, discount, setValue, isBill]);
   
   // Update due amount when paid amount changes
   useEffect(() => {
@@ -141,6 +167,10 @@ export default function InvoiceForm({ defaultValues, onSuccess }: InvoiceFormPro
         });
       } else {
         if(invoiceType === InvoiceType.PROVIDER) delete data.toZoneId
+        else if(invoiceType === InvoiceType.COMPANY) {
+          delete data.toProviderId;
+          delete data.toZoneId
+        }
         else delete data.toProviderId
         
         const invoiceData = {
@@ -158,7 +188,10 @@ export default function InvoiceForm({ defaultValues, onSuccess }: InvoiceFormPro
             amount: +item.amount
           })) : undefined
         };
-        
+        // if(data.type === InvoiceType.COMPANY){
+        //   data.toZoneId = null;
+        //   data.toProviderId = null;
+        // }
         await createInvoice(invoiceData).unwrap();
         
         toast({
@@ -205,6 +238,10 @@ export default function InvoiceForm({ defaultValues, onSuccess }: InvoiceFormPro
                 <RadioGroupItem value={InvoiceType.ZONE} id="zone" />
                 <Label htmlFor="zone">Zone</Label>
               </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value={InvoiceType.COMPANY} id="company" />
+                <Label htmlFor="company">Company</Label>
+              </div>
             </RadioGroup>
             {errors.type && <ErrorMessage message={errors.type.message ?? ''} />}
           </div>
@@ -213,7 +250,7 @@ export default function InvoiceForm({ defaultValues, onSuccess }: InvoiceFormPro
             <div>
               <Label htmlFor="toProviderId">Provider</Label>
               <Select 
-                defaultValue={defaultValues?.toProviderId} 
+                defaultValue={defaultValues?.toProviderId ? defaultValues?.toProviderId : ""} 
                 onValueChange={(value) => setValue('toProviderId', value)}
               >
                 <SelectTrigger>
@@ -235,7 +272,7 @@ export default function InvoiceForm({ defaultValues, onSuccess }: InvoiceFormPro
             <div>
               <Label htmlFor="toZoneId">Zone</Label>
               <Select 
-                defaultValue={defaultValues?.toZoneId} 
+                defaultValue={defaultValues?.toZoneId ? defaultValues?.toZoneId : ""} 
                 onValueChange={(value) => setValue('toZoneId', value)}
               >
                 <SelectTrigger>
@@ -252,21 +289,95 @@ export default function InvoiceForm({ defaultValues, onSuccess }: InvoiceFormPro
               {errors.toZoneId && <ErrorMessage message={errors.toZoneId.message ?? ''} />}
             </div>
           )}
-          
+
+          <div>
+            <DatePicker
+              label="Invoice Date"
+              id="invoiceDate"
+              value={watch('invoiceDate') ? new Date(watch('invoiceDate')) : undefined}
+              onChange={(date) => {
+                setValue('invoiceDate', date ? date.toISOString().split('T')[0] : '')
+              }}
+              placeholder="Select invoice date"
+            />
+            {errors.invoiceDate && <ErrorMessage message={errors.invoiceDate.message ?? ''} />}
+          </div>
+        </div>
+      </div>
+      
+      {invoiceType !== InvoiceType.COMPANY && (
+        <div className="flex items-center space-x-2">
+          <Switch id="is-bill-switch" checked={isBill} onCheckedChange={setIsBill} />
+          <Label htmlFor="is-bill-switch">Is Bill?</Label>
+        </div>
+      )}
+
+      {invoiceType === InvoiceType.COMPANY && (
+        <div className="text-sm text-muted-foreground">
+          Company invoices are automatically set to bill mode.
+        </div>
+      )}
+      
+      {isBill ? (
+        <BillItemsForm items={lineItems} onChange={setLineItems} />
+      ) : (
+        <InvoiceItemsForm
+          items={lineItems}
+          onChange={setLineItems}
+        />
+      )}
+
+      {/* Right-aligned sections after line items */}
+      <div className="flex justify-end">
+        <div className="w-full max-w-md space-y-4">
+          {/* Subtotal */}
+          <div className="flex justify-between">
+            <span>Subtotal:</span>
+            <span className="font-semibold">
+              ${lineItems.reduce((sum, item) => {
+                if (isBill) {
+                  return sum + (item.amount || 0);
+                }
+                const itemTotal = item.quantity * item.unitPrice * (1 - (item.discountPercent / 100));
+                return sum + itemTotal;
+              }, 0).toFixed(2)}
+            </span>
+          </div>
+
+          {/* Discount Section */}
+          <DiscountInput
+            label="Discount"
+            value={discount}
+            onChange={(newDiscount) => {
+              setDiscount(newDiscount);
+              setValue('discountType', newDiscount.type);
+              setValue('discountValue', newDiscount.value);
+            }}
+            totalAmount={lineItems.reduce((sum, item) => {
+              if (isBill) {
+                return sum + (item.amount || 0);
+              }
+              const itemTotal = item.quantity * item.unitPrice * (1 - (item.discountPercent / 100));
+              return sum + itemTotal;
+            }, 0)}
+            showCalculation={false}
+          />
+
+          {/* Paid Amount Section */}
           <div>
             <Label htmlFor="paidAmount">Paid Amount</Label>
             <Input
               id="paidAmount"
               type="number"
+              defaultValue={0}
               step="0.01"
               {...register('paidAmount', { valueAsNumber: true })}
             />
             {errors.paidAmount && <ErrorMessage message={errors.paidAmount.message ?? ''} />}
           </div>
-        </div>
-        
-        <Card className="p-4">
-          <div className="space-y-4">
+
+          {/* Final calculations */}
+          <div className="space-y-2 pt-2 border-t">
             <div className="flex justify-between">
               <span>Total Amount:</span>
               <span className="font-semibold">${totalAmount.toFixed(2)}</span>
@@ -275,28 +386,14 @@ export default function InvoiceForm({ defaultValues, onSuccess }: InvoiceFormPro
               <span>Paid Amount:</span>
               <span className="font-semibold">${(paidAmount || 0).toFixed(2)}</span>
             </div>
-            <div className="flex justify-between border-t pt-2">
+            <div className="flex justify-between font-semibold">
               <span>Due Amount:</span>
-              <span className="font-semibold">${(totalAmount - (paidAmount || 0)).toFixed(2)}</span>
+              <span>${(totalAmount - (paidAmount || 0)).toFixed(2)}</span>
             </div>
           </div>
-        </Card>
+        </div>
       </div>
-      
-      <div className="flex items-center space-x-2">
-        <Switch id="is-bill-switch" checked={isBill} onCheckedChange={setIsBill} />
-        <Label htmlFor="is-bill-switch">Is Bill?</Label>
-      </div>
-      
-      {isBill ? (
-        <BillItemsForm items={lineItems} onChange={setLineItems} />
-      ) : (
-        <InvoiceItemsForm 
-          items={lineItems} 
-          onChange={setLineItems} 
-        />
-      )}
-      
+
       <div className="flex justify-end space-x-2">
         <Button 
           type="button" 

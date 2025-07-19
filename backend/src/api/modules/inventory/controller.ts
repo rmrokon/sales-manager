@@ -11,7 +11,7 @@ export default class InventoryController {
   }
 
   findInventory = async (req: Request, res: Response) => {
-    const inventory = await this._service.findInventory(req.query as Record<string, unknown>);
+    const inventory = await this._service.findInventory({...req.query, companyId: req.auth?.cid} as Record<string, unknown>);
     return SuccessResponses(req, res, inventory, {
       statusCode: 200,
     });

@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
+import { DatePicker } from "@/components/ui/date-picker";
 import { useDialog } from "@/hooks/use-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { isRtkQueryError } from "@/lib/utils";
@@ -54,6 +55,7 @@ export default function PaymentForm({ defaultValues, preselectedInvoiceId, onSuc
     handleSubmit,
     register,
     setValue,
+    watch,
     formState: { errors }
   } = useForm<PaymentFormData>({
     resolver: zodResolver(paymentSchema),
@@ -61,9 +63,9 @@ export default function PaymentForm({ defaultValues, preselectedInvoiceId, onSuc
     reValidateMode: 'onChange',
     defaultValues: {
       invoiceId: preselectedInvoiceId || defaultValues?.invoiceId || '',
-      amount: defaultValues?.amount || 0,
-      paymentDate: defaultValues?.paymentDate 
-        ? new Date(defaultValues.paymentDate).toISOString().split('T')[0] 
+      amount: defaultValues?.amount || undefined,
+      paymentDate: defaultValues?.paymentDate
+        ? new Date(defaultValues.paymentDate).toISOString().split('T')[0]
         : new Date().toISOString().split('T')[0],
       paymentMethod: defaultValues?.paymentMethod as PaymentMethod || PaymentMethod.CASH,
       remarks: defaultValues?.remarks || ''
@@ -148,11 +150,14 @@ export default function PaymentForm({ defaultValues, preselectedInvoiceId, onSuc
       </div>
       
       <div>
-        <Label htmlFor="paymentDate">Payment Date</Label>
-        <Input
+        <DatePicker
+          label="Payment Date"
           id="paymentDate"
-          type="date"
-          {...register('paymentDate')}
+          value={watch('paymentDate') ? new Date(watch('paymentDate')) : undefined}
+          onChange={(date) => {
+            setValue('paymentDate', date ? date.toISOString().split('T')[0] : '')
+          }}
+          placeholder="Select payment date"
         />
         {errors.paymentDate && <ErrorMessage message={errors.paymentDate.message ?? ''} />}
       </div>

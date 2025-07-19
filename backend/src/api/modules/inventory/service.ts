@@ -55,9 +55,20 @@ export default class InventoryService implements IInventoryService {
   }
 
   async findInventory(query: Record<string, unknown>, options?: { t: Transaction }) {
-    const { search, ...rest } = query;
-    const records = await this._repo.find(rest, {
+    const {
+    search,
+    page = '1',
+    limit = '10',
+    ...restQuery
+  } = query;
+  // Convert pagination values to numbers
+  const pageNumber = parseInt(page as string, 10) || 1;
+  const limitNumber = parseInt(limit as string, 10) || 10;
+  const offset = (pageNumber - 1) * limitNumber;
+    const records = await this._repo.find(restQuery, {
       ...options,
+      offset,
+      limit: limitNumber,
       include: [
         { model: Product },
         { model: Provider }

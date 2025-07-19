@@ -15,11 +15,13 @@ export default function CreateInvoiceButton() {
         Create Invoice
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create New Invoice</DialogTitle>
           </DialogHeader>
-          <InvoiceForm onSuccess={() => setOpen(false)} />
+          <div className="max-h-[calc(90vh-120px)] overflow-y-auto pr-2">
+            <InvoiceForm onSuccess={() => setOpen(false)} />
+          </div>
         </DialogContent>
       </Dialog>
     </>

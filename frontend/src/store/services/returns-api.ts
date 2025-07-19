@@ -1,48 +1,7 @@
-import { IProduct } from "@/utils/types/product";
 import { storeApiConfig } from "../api-config";
+import { CreateReturnParams, ProductReturn, UpdateReturnParams } from "@/utils/types/returns";
 
-export interface ReturnItem {
-  id?: string;
-    productId: string;
-    returnedQuantity: number;
-    unitPrice: number;
-    returnAmount: number;
-    product?: Partial<IProduct>
-}
 
-export interface CreateReturnParams {
-  originalInvoiceId: string;
-  zoneId: string;
-  totalReturnAmount: number;
-  remarks?: string;
-  returnItems: ReturnItem[];
-  paymentAmount?: number;
-}
-
-export interface UpdateReturnParams {
-  status?: 'pending' | 'approved' | 'rejected';
-  remarks?: string;
-}
-
-export interface ProductReturn {
-  id: string;
-  originalInvoiceId: string;
-  zoneId: string;
-  totalReturnAmount: number;
-  status: 'pending' | 'approved' | 'rejected';
-  remarks?: string;
-  createdAt: string;
-  updatedAt: string;
-  zone?: {
-    id: string;
-    name: string;
-  };
-  originalInvoice?: {
-    id: string;
-    invoiceNumber: string;
-  };
-  returnItems?: ReturnItem[];
-}
 
 export const returnsApi = storeApiConfig.injectEndpoints({
   endpoints: (builder) => ({
@@ -93,12 +52,22 @@ export const returnsApi = storeApiConfig.injectEndpoints({
       providesTags: (result, error, id) => [{ type: 'Returns', id }],
     }),
 
-    getReturnsByInvoice: builder.query<ProductReturn[], string>({
+    getReturnsByInvoice: builder.query<{result: ProductReturn[], pagination?: any}, string>({
       query: (invoiceId) => ({
         url: '/returns',
         method: 'GET',
         params: { invoiceId },
       }),
+      transformResponse: (res: any)=>{
+        const transformedData = res.result;
+        if(res.pagination){
+          return {
+            result: transformedData,
+            pagination: res.pagination
+          }
+        }
+        return {result: res.result}
+      },
       providesTags: ['Returns'],
     }),
 

@@ -29,6 +29,7 @@ export const ProductReturnCreationValidationSchema = z.object({
   remarks: z.string().optional(),
   returnItems: z.array(ProductReturnItemValidationSchema).min(1, 'At least one return item is required'),
   paymentAmount: z.number().min(0, 'Payment amount cannot be negative').optional(),
+  returnDate: z.string().optional(),
   status: z.nativeEnum(ReturnStatus).optional()
 }).refine(data => {
   // Validate that total return amount matches sum of return items
