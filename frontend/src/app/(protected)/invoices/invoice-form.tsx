@@ -324,6 +324,7 @@ export default function InvoiceForm({ defaultValues, onSuccess }: InvoiceFormPro
         <InvoiceItemsForm
           items={lineItems}
           onChange={setLineItems}
+          invoiceType={invoiceType}
         />
       )}
 

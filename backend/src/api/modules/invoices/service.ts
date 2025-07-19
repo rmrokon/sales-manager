@@ -15,6 +15,7 @@ import Product from '../products/model';
 import Bill from '../bills/model';
 import { InvoiceType } from './types';
 import { TransactionType } from '../inventory-transactions/types';
+import { IProduct } from '../products/types';
 
 export interface IInvoiceService {
   findInvoices(query: Record<string, unknown>): Promise<IInvoice[]>;
@@ -50,6 +51,65 @@ export default class InvoiceService implements IInvoiceService {
     };
   }
 
+  /**
+   * Get the appropriate price for a product based on invoice type
+   * @param product - The product object
+   * @param invoiceType - The type of invoice (PROVIDER, ZONE, COMPANY)
+   * @returns The appropriate price to use
+   */
+  private getProductPriceForInvoiceType(product: IProduct, invoiceType: InvoiceType): number {
+    switch (invoiceType) {
+      case InvoiceType.PROVIDER:
+        // For provider invoices (purchasing), use purchase price
+        return product.purchasePrice || product.price || 0;
+      case InvoiceType.ZONE:
+      case InvoiceType.COMPANY:
+        // For zone/company invoices (selling), use selling price
+        return product.sellingPrice || product.price || 0;
+      default:
+        // Fallback to legacy price or 0
+        return product.price || 0;
+    }
+  }
+
+  /**
+   * Validate and adjust invoice item prices based on invoice type
+   * @param items - Array of invoice items
+   * @param invoiceType - The type of invoice
+   * @param t - Database transaction
+   */
+  private async validateAndAdjustItemPrices(items: any[], invoiceType: InvoiceType, t: Transaction) {
+    const adjustedItems = [];
+
+    for (const item of items) {
+      // Fetch the product to get current pricing
+      const product = await Product.findByPk(item.productId, { transaction: t });
+      if (!product) {
+        throw new InternalServerError(`Product with ID ${item.productId} not found`);
+      }
+
+      const expectedPrice = this.getProductPriceForInvoiceType(product, invoiceType);
+
+      // Use the expected price if no unit price is provided, or validate if provided
+      const adjustedItem = {
+        ...item,
+        unitPrice: item.unitPrice || expectedPrice
+      };
+
+      // Optional: Add validation to ensure the provided price matches expected price
+      // This can be enabled if strict price validation is required
+      // if (item.unitPrice && Math.abs(item.unitPrice - expectedPrice) > 0.01) {
+      //   throw new InternalServerError(
+      //     `Invalid price for product ${product.name}. Expected: ${expectedPrice}, Provided: ${item.unitPrice}`
+      //   );
+      // }
+
+      adjustedItems.push(adjustedItem);
+    }
+
+    return adjustedItems;
+  }
+
   async createInvoice(body: IInvoiceCreationBody) {
     const t = await sequelize.startUnmanagedTransaction();
     const { items, bills, ...invoiceData } = body;
@@ -58,19 +118,22 @@ export default class InvoiceService implements IInvoiceService {
       const invoice = await this._repo.create(invoiceData, { t });
       if (!invoice) throw new InternalServerError('Create invoice failed');
 
-      // If there are items, create them and handle inventory
+      // If there are items, validate and adjust prices, then create them and handle inventory
       if(items?.length){
-        const payload = items.map(item => ({...item, invoiceId: invoice.id}));
+        // Validate and adjust item prices based on invoice type
+        const adjustedItems = await this.validateAndAdjustItemPrices(items, invoice.type, t);
+
+        const payload = adjustedItems.map(item => ({...item, invoiceId: invoice.id}));
         await invoiceItemService.createInvoiceItemInBulk(payload, t);
 
         // Handle inventory based on invoice type
         if (invoice.type === InvoiceType.PROVIDER) {
           // Provider invoice: Add products to inventory
           console.log({invoice})
-          await this.handleProviderInvoiceInventory(invoice, items, t);
+          await this.handleProviderInvoiceInventory(invoice, adjustedItems, t);
         } else if (invoice.type === InvoiceType.ZONE) {
           // Zone invoice: Deduct products from inventory
-          await this.handleZoneInvoiceInventory(invoice, items, t);
+          await this.handleZoneInvoiceInventory(invoice, adjustedItems, t);
         }
       }
 

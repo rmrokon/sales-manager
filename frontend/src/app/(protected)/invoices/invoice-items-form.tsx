@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { formatCurrency } from "@/lib/utils"
 import { useGetProductsQuery } from "@/store/services/product"
+import { InvoiceType } from "@/utils/types/invoice"
 import { Plus, Trash } from "lucide-react"
 import { useState } from "react"
 
@@ -22,9 +23,10 @@ interface InvoiceItemsFormProps {
   items: InvoiceItem[]
   onChange: (items: InvoiceItem[]) => void
   invoiceId?: string
+  invoiceType?: InvoiceType
 }
 
-export default function InvoiceItemsForm({ items, onChange, invoiceId }: InvoiceItemsFormProps) {
+export default function InvoiceItemsForm({ items, onChange, invoiceId, invoiceType }: InvoiceItemsFormProps) {
   const { data: productsData, isLoading } = useGetProductsQuery({})
   const [newItem, setNewItem] = useState<InvoiceItem>({
     productId: '',
@@ -33,21 +35,43 @@ export default function InvoiceItemsForm({ items, onChange, invoiceId }: Invoice
     discountPercent: 0
   })
 
+  // Helper function to get the appropriate price based on invoice type
+  const getProductPrice = (product: any) => {
+    if (!invoiceType) {
+      // Fallback to legacy price if invoice type is not provided
+      return product.price || product.sellingPrice || product.purchasePrice || 0
+    }
+
+    switch (invoiceType) {
+      case InvoiceType.PROVIDER:
+        // For provider invoices (purchasing), use purchase price
+        return product.purchasePrice || product.price || 0
+      case InvoiceType.ZONE:
+      case InvoiceType.COMPANY:
+        // For zone/company invoices (selling), use selling price
+        return product.sellingPrice || product.price || 0
+      default:
+        // Fallback to legacy price
+        return product.price || 0
+    }
+  }
+
   const handleAddItem = () => {
     if (!newItem.productId) return
 
     // Find the product to get its price
     const product = productsData?.result.find(p => p.id === newItem.productId)
     if (product) {
-      // Use the product's price as the unit price if not specified
+      // Use the appropriate price based on invoice type
+      const appropriatePrice = getProductPrice(product)
       const itemToAdd = {
         ...newItem,
         quantity: newItem.quantity || 1, // Default to 1 if 0
-        unitPrice: newItem.unitPrice || product.price
+        unitPrice: newItem.unitPrice || appropriatePrice
       }
 
       onChange([...items, itemToAdd])
-      
+
       // Reset the form
       setNewItem({
         productId: '',
@@ -66,10 +90,11 @@ export default function InvoiceItemsForm({ items, onChange, invoiceId }: Invoice
 
   const handleProductChange = (productId: string) => {
     const product = productsData?.result.find(p => p.id === productId)
+    const appropriatePrice = product ? getProductPrice(product) : 0
     setNewItem({
       ...newItem,
       productId,
-      unitPrice: product?.price || 0
+      unitPrice: appropriatePrice
     })
   }
 
@@ -135,7 +160,12 @@ export default function InvoiceItemsForm({ items, onChange, invoiceId }: Invoice
                 <SelectContent>
                   {productsData?.result.map((product) => (
                     <SelectItem key={product.id} value={product.id}>
-                      {product.name} - {formatCurrency(product.price)}
+                      {product.name} - {formatCurrency(getProductPrice(product))}
+                      {invoiceType && (
+                        <span className="text-xs text-muted-foreground ml-2">
+                          ({invoiceType === InvoiceType.PROVIDER ? 'Purchase' : 'Selling'} Price)
+                        </span>
+                      )}
                     </SelectItem>
                   ))}
                 </SelectContent>

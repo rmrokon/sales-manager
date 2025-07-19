@@ -34,12 +34,12 @@ export default class ProductService implements IProductService {
     const record = await sequelize.transaction(async (t) => {
       const record = await this._repo.create(body, { t });
       if (!record) throw new InternalServerError('Create product failed');
-      
+
       // Associate providers if providerIds are provided
       if (body.providerIds && body.providerIds.length > 0) {
         await record.setProviders(body.providerIds, { transaction: t });
       }
-      
+
       return record as IDataValues<IProduct>;
     });
     return this.convertToJson(record) as IProduct;
@@ -50,18 +50,25 @@ export default class ProductService implements IProductService {
     body: IProductRequestBody & { providerIds?: string[] },
   ) {
     const record = await sequelize.transaction(async (t) => {
-      const updatedProduct = await this._repo.update(query, body, { t });
+      // Ensure backward compatibility: if only price is provided, use it for both purchase and selling
+      const productData = {
+        ...body,
+        purchasePrice: body.purchasePrice || body.price,
+        sellingPrice: body.sellingPrice || body.price,
+      };
+
+      const updatedProduct = await this._repo.update(query, productData, { t });
       if (!updatedProduct) throw new InternalServerError('Update product failed');
-      
+
       // Get the product record
       const product = await this._repo.findOne(query, { t });
       if (!product) throw new InternalServerError('Product not found after update');
-      
+
       // Update provider associations if providerIds are provided
       if (body.providerIds !== undefined) {
         await product.setProviders(body.providerIds, { transaction: t });
       }
-      
+
       return product as IDataValues<IProduct>;
     });
     return this.convertToJson(record) as IProduct;
