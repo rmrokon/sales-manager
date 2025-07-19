@@ -21,7 +21,9 @@ import { Spinner } from "@/components/ui/spinner";
 
 const productSchema = z.object({
     name: z.string().nonempty({ message: 'Product name is required' }),
-    price: z.coerce.number().min(0, { message: 'Price must be a positive number' }),
+    purchasePrice: z.coerce.number().min(0, { message: 'Purchase price must be a positive number' }),
+    sellingPrice: z.coerce.number().min(0, { message: 'Selling price must be a positive number' }),
+    price: z.coerce.number().min(0, { message: 'Price must be a positive number' }).optional(), // Keep for backward compatibility
     description: z.string().optional(),
     providerIds: z.array(z.string()).optional()
 });
@@ -56,7 +58,9 @@ export default function ProductForm({ defaultValues, onSuccess }: ProductFormPro
         reValidateMode: 'onChange',
         defaultValues: {
           name: defaultValues?.name || '',
-          price: defaultValues?.price || undefined,
+          purchasePrice: defaultValues?.purchasePrice || defaultValues?.price || undefined,
+          sellingPrice: defaultValues?.sellingPrice || defaultValues?.price || undefined,
+          price: defaultValues?.price || undefined, // Keep for backward compatibility
           description: defaultValues?.description || '',
           providerIds: []
         }
@@ -132,15 +136,30 @@ export default function ProductForm({ defaultValues, onSuccess }: ProductFormPro
                 {errors.name?.message && <ErrorMessage message={errors.name?.message} />}
             </div>
             
-            <div className="grid gap-2">
-                <Label htmlFor="price">Price</Label>
-                <Input
-                    id="price"
-                    type="number"
-                    step="0.01"
-                    {...register("price")}
-                />
-                {errors.price?.message && <ErrorMessage message={errors.price?.message} />}
+            <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                    <Label htmlFor="purchasePrice">Purchase Price</Label>
+                    <Input
+                        id="purchasePrice"
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        {...register("purchasePrice")}
+                    />
+                    {errors.purchasePrice?.message && <ErrorMessage message={errors.purchasePrice?.message} />}
+                </div>
+
+                <div className="grid gap-2">
+                    <Label htmlFor="sellingPrice">Selling Price</Label>
+                    <Input
+                        id="sellingPrice"
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        {...register("sellingPrice")}
+                    />
+                    {errors.sellingPrice?.message && <ErrorMessage message={errors.sellingPrice?.message} />}
+                </div>
             </div>
             
             <div className="grid gap-2">

@@ -6,6 +6,9 @@ import Company from '../companies/model';
 export default class Product extends Model<InferAttributes<Product>, InferCreationAttributes<Product>> {
   declare id: CreationOptional<string>;
   declare name: string;
+  declare purchasePrice: number;
+  declare sellingPrice: number;
+  declare price?: CreationOptional<number>; // Keep for backward compatibility during migration
   declare company_id?: CreationOptional<string>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
@@ -25,9 +28,19 @@ Product.init(
       type: new DataTypes.STRING(128),
       allowNull: false,
     },
-    price: {
+    purchasePrice: {
+      columnName: 'purchase_price',
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
+    },
+    sellingPrice: {
+      columnName: 'selling_price',
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+    },
+    price: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true, // Make nullable for backward compatibility
     },
     description: {
       type: DataTypes.TEXT,

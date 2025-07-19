@@ -1,5 +1,5 @@
 "use client"
-import { Banknote, Building2, ChevronUp, FileText, Home, LocateIcon, Moon, MoreHorizontal, Package, Receipt, RotateCcw, Settings, Sun, Truck, User2, Warehouse } from "lucide-react"
+import { Banknote, Building2, ChevronUp, FileText, Home, LocateIcon, Moon, Package, Receipt, RotateCcw, Settings, Sun, Truck, User2, Warehouse } from "lucide-react"
 import {
     Sidebar,
     SidebarContent,
@@ -9,12 +9,9 @@ import {
     SidebarGroupLabel,
     SidebarHeader,
     SidebarMenu,
-    SidebarMenuAction,
     SidebarMenuButton,
     SidebarMenuItem,
     useSidebar,
-    // SidebarMenuSub,
-    // SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu"
 import { useDispatch, useSelector } from "react-redux";
