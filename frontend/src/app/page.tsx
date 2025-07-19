@@ -10,17 +10,11 @@ export default function HomePage() {
   const { isLoggedIn, initializing } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch();
   const router = useRouter();
+  const token = localStorage.getItem('accessToken');
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (!initializing) {
-      if (isLoggedIn) {
-        router.replace("/invoices");
-      } else {
-        router.replace("/login");
-      }
-    }
     if(!token){
+      console.log("No token found");
       dispatch(
       setAuthUser({
         user: null,
@@ -30,9 +24,12 @@ export default function HomePage() {
         initializing: false,
       })
     );
+    router.replace("/login");
+    }else {
+       router.replace("/invoices");
     }
-  }, [initializing, isLoggedIn, router]);
-
+  }, [token]);
+  console.log("rendering page.tsx")
   // Show loading spinner while determining where to redirect
   return (
     <div className="flex items-center justify-center min-h-screen">

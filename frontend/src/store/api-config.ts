@@ -28,37 +28,39 @@ import {
       return headers
     },
   });
-  // const baseQueryWithReauth: BaseQueryFn<
-  //   string | FetchArgs,
-  //   ApiResponse | unknown,
-  //   FetchBaseQueryError
-  // > = async (args, api, extraOptions) => {
-  //   let result = await baseQuery(args, api, extraOptions);
-  //   if (result.error && result.error.status === 401) {
-  //     const response = await baseQuery(
-  //       {
-  //         url: "/credentials/me",
-  //         method: "POST",
-  //         params: {},
-  //         credentials: "include",
-  //       },
-  //       api,
-  //       extraOptions
-  //     );
-  //     const { data }: { data?: ApiResponse } = response as { data?: ApiResponse };
-  //     if (data) {
-  //       api.dispatch(setAuthUser({ ...data.result, initializing: false }));
-  //       result = await baseQuery(args, api, extraOptions);
-  //     } else {
-  //       console.log("logged out");
-  //     }
-  //   }
-  //   return result;
-  // };
+  const baseQueryWithReauth: BaseQueryFn<
+    string | FetchArgs,
+    ApiResponse | unknown,
+    FetchBaseQueryError
+  > = async (args, api, extraOptions) => {
+    const result = await baseQuery(args, api, extraOptions);
+    if (result.error && result.error.status === 401) {
+      api.dispatch(setAuthUser({}));
+      localStorage.removeItem("accessToken");
+      // const response = await baseQuery(
+      //   {
+      //     url: "/credentials/me",
+      //     method: "POST",
+      //     params: {},
+      //     credentials: "include",
+      //   },
+      //   api,
+      //   extraOptions
+      // );
+      // const { data }: { data?: ApiResponse } = response as { data?: ApiResponse };
+      // if (data) {
+      //   api.dispatch(setAuthUser({ ...data.result, initializing: false }));
+      //   result = await baseQuery(args, api, extraOptions);
+      // } else {
+      //   console.log("logged out");
+      // }
+    }
+    return result;
+  };
   
   export const storeApiConfig = createApi({
     reducerPath: "api",
-    baseQuery: baseQuery,
+    baseQuery: baseQueryWithReauth,
     tagTypes: [
       "notification",
       "leave",
