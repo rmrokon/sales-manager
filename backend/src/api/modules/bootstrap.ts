@@ -75,7 +75,7 @@ import ProductReturnItemService from './product-return-items/service';
 import ProductReturnItemController from './product-return-items/controller';
 
 // Credential
-export const credentialRepository = new CredentialRepository(Credential as unknown as BaseModel<ICredential>);
+export const credentialRepository = new CredentialRepository(Credential);
 export const credentialService = new CredentialService(credentialRepository);
 export const credentialController = new CredentialController(credentialService);
 

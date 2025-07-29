@@ -265,6 +265,13 @@ export default function InvoiceDetail() {
                     );
                   })()}
 
+                  {invoiceData.paidAmount > 0 && (
+                    <div className="flex justify-between py-2 text-blue-600">
+                      <span className="font-medium">Down Payment:</span>
+                      <span>-{formatCurrency(invoiceData.paidAmount)}</span>
+                    </div>
+                  )}
+
                   <div className="flex justify-between py-2 text-green-600">
                     <span className="font-medium">Total Payments:</span>
                     <span>-{formatCurrency(totalPayments)}</span>
@@ -274,7 +281,7 @@ export default function InvoiceDetail() {
                     <span>-{formatCurrency(totalReturns)}</span>
                   </div>
                   <div className="flex justify-between py-2 border-t border-gray-300">
-                    <span className="font-medium">Outstanding Balance:</span>
+                    <span className="font-medium">Due Amount:</span>
                     <span className={`font-bold ${effectiveOutstanding > 0 ? 'text-red-600' : effectiveOutstanding < 0 ? 'text-green-600' : 'text-gray-600'}`}>
                       {formatCurrency(Math.abs(effectiveOutstanding))}
                       {effectiveOutstanding < 0 && ' (Credit)'}

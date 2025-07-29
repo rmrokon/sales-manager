@@ -33,8 +33,7 @@ export function DatePicker({
   className,
   id
 }: DatePickerProps) {
-  const [open, setOpen] = React.useState(false)
-
+  const [open, setOpen] = React.useState(true);
   return (
     <div className="flex flex-col gap-2">
       {label && (
@@ -42,7 +41,7 @@ export function DatePicker({
           {label}
         </Label>
       )}
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={setOpen} modal defaultOpen={false}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
@@ -55,10 +54,14 @@ export function DatePicker({
             )}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
-            {value ? format(value, "PPP") : <span>{placeholder}</span>}
+            {value ? value.toLocaleDateString() : <span>{placeholder}</span>}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent className="w-full overflow-hidden p-0"
+            align="end"
+            // alignOffset={-8}
+            // sideOffset={10}
+            >
           <Calendar
             mode="single"
             selected={value}
@@ -74,8 +77,12 @@ export function DatePicker({
   )
 }
 
+interface SimpleDatePickerProps {
+  label: string;
+  onChange: (date: Date | undefined) => void
+}
 // Legacy component for backward compatibility
-export function SimpleDatePicker({label}: {label: string}) {
+export function SimpleDatePicker({label, onChange }: SimpleDatePickerProps) {
   const [open, setOpen] = React.useState(false)
   const [date, setDate] = React.useState<Date | undefined>(undefined)
 
@@ -101,6 +108,8 @@ export function SimpleDatePicker({label}: {label: string}) {
             selected={date}
             captionLayout="dropdown"
             onSelect={(date) => {
+              onChange?.(date);
+              setDate(date);
               setDate(date)
               setOpen(false)
             }}
