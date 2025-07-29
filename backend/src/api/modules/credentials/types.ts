@@ -1,8 +1,6 @@
 import { z } from 'zod';
 import { IUser } from '../users/types';
 import { CredentialBodyValidationSchema, LoginCredentialBodyValidationSchema } from './validations';
-import { ICompany } from '../companies/types';
-import { IRole } from '../roles/types';
 import Role from '../roles/model';
 import Permission from '../permissions/model';
 import Company from '../companies/model';
