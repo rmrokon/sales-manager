@@ -153,9 +153,18 @@ export default function PaymentForm({ defaultValues, preselectedInvoiceId, onSuc
         <DatePicker
           label="Payment Date"
           id="paymentDate"
-          value={watch('paymentDate') ? new Date(watch('paymentDate')) : undefined}
+          value={(() => {
+            const dateValue = watch('paymentDate');
+            if (!dateValue) return undefined;
+            const date = new Date(dateValue);
+            return isNaN(date.getTime()) ? undefined : date;
+          })()}
           onChange={(date) => {
-            setValue('paymentDate', date ? date.toISOString().split('T')[0] : '')
+            if (date) {
+              setValue('paymentDate', date.toISOString().split('T')[0]);
+            } else {
+              setValue('paymentDate', '');
+            }
           }}
           placeholder="Select payment date"
         />

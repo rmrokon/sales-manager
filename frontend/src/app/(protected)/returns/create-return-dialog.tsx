@@ -28,7 +28,7 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { Plus, Trash2 } from 'lucide-react';
 import { useCreateReturnMutation } from '@/store/services/returns-api';
 import { toast } from '@/hooks/use-toast';
-import { useGetInvoicesQuery } from '@/store/services/invoice';
+import { useGetInvoicesQuery, useGetInvoiceWithItemsQuery } from '@/store/services/invoice';
 import { useGetProductsQuery } from '@/store/services/product';
 import { IProduct } from '@/utils/types/product';
 import { IInvoice } from '@/utils/types/invoice';
@@ -40,19 +40,27 @@ const returnItemSchema = z.object({
   returnAmount: z.number().min(0, 'Return amount cannot be negative'),
 });
 
-const createReturnSchema = z.object({
+// Schema for form validation that allows empty items
+const returnItemFormSchema = z.object({
+  productId: z.string().optional(),
+  returnedQuantity: z.number().optional(),
+  unitPrice: z.number().optional(),
+  returnAmount: z.number().min(0, 'Return amount cannot be negative').optional(),
+});
+
+const createReturnFormSchema = z.object({
   originalInvoiceId: z.string().min(1, 'Invoice is required'),
   zoneId: z.string().min(1, 'Zone is required'),
   totalReturnAmount: z.number().min(0, 'Total return amount cannot be negative'),
   remarks: z.string().optional(),
-  returnItems: z.array(returnItemSchema).min(1, 'At least one return item is required'),
-  paymentAmount: z.number().min(0, 'Payment amount cannot be negative').optional(),
+  returnItems: z.array(returnItemFormSchema),
+  paymentAmount: z.number().min(0, 'Payment amount cannot be negative').optional().or(z.literal('')),
   returnDate: z.string({
     required_error: "Return date is required"
   }),
 });
 
-type CreateReturnFormData = z.infer<typeof createReturnSchema>;
+type CreateReturnFormData = z.infer<typeof createReturnFormSchema>;
 
 interface CreateReturnDialogProps {
   open: boolean;
@@ -61,10 +69,25 @@ interface CreateReturnDialogProps {
 
 export function CreateReturnDialog({ open, onOpenChange }: CreateReturnDialogProps) {
   const [selectedInvoice, setSelectedInvoice] = useState<IInvoice | null>(null);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>('');
 
   const { data: invoices } = useGetInvoicesQuery({ type: 'zone' });
   const { data: products } = useGetProductsQuery({});
+  const { data: invoiceWithItems } = useGetInvoiceWithItemsQuery(selectedInvoiceId, {
+    skip: !selectedInvoiceId
+  });
   const [createReturn, { isLoading }] = useCreateReturnMutation();
+
+  // Helper function to get unit price from original invoice items
+  const getOriginalUnitPrice = (productId: string): number => {
+    if (!invoiceWithItems?.result?.InvoiceItems) return 0;
+
+    const originalItem = invoiceWithItems.result.InvoiceItems.find(
+      (item: any) => item.productId === productId
+    );
+
+    return originalItem?.unitPrice || 0;
+  };
 
   const {
     handleSubmit,
@@ -75,7 +98,7 @@ export function CreateReturnDialog({ open, onOpenChange }: CreateReturnDialogPro
     setValue,
     reset,
   } = useForm<CreateReturnFormData>({
-    resolver: zodResolver(createReturnSchema),
+    resolver: zodResolver(createReturnFormSchema),
     defaultValues: {
       originalInvoiceId: '',
       zoneId: '',
@@ -117,6 +140,7 @@ export function CreateReturnDialog({ open, onOpenChange }: CreateReturnDialogPro
   const handleInvoiceChange = (invoiceId: string) => {
     const invoice = invoices?.result?.find((inv: IInvoice) => inv.id === invoiceId);
     setSelectedInvoice(invoice || null);
+    setSelectedInvoiceId(invoiceId);
     setValue('originalInvoiceId', invoiceId);
   };
 
@@ -133,17 +157,49 @@ export function CreateReturnDialog({ open, onOpenChange }: CreateReturnDialogPro
 
   const onSubmit = async (data: CreateReturnFormData) => {
     try {
-      await createReturn({...data}).unwrap();
+      // Filter out empty return items
+      const validReturnItems = data.returnItems.filter(item =>
+        item.productId &&
+        item.returnedQuantity &&
+        item.unitPrice !== undefined &&
+        item.returnAmount !== undefined
+      );
+
+      // Validate that we have at least one valid return item
+      if (validReturnItems.length === 0) {
+        toast({
+          title: 'Validation Error',
+          description: 'At least one return item is required',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Validate each return item against the strict schema
+      const validatedItems = validReturnItems.map(item => {
+        const result = returnItemSchema.safeParse(item);
+        if (!result.success) {
+          throw new Error(`Invalid return item: ${result.error.errors[0].message}`);
+        }
+        return result.data;
+      });
+
+      const submitData = {
+        ...data,
+        returnItems: validatedItems
+      };
+
+      await createReturn(submitData).unwrap();
       toast({
         title: 'Success',
         description: 'Return created successfully',
       });
       reset();
       onOpenChange(false);
-    } catch {
+    } catch (error: any) {
       toast({
         title: 'Error',
-        description: 'Failed to create return',
+        description: error.message || 'Failed to create return',
         variant: 'destructive',
       });
     }
@@ -198,9 +254,18 @@ export function CreateReturnDialog({ open, onOpenChange }: CreateReturnDialogPro
               <DatePicker
                 label="Return Date"
                 id="returnDate"
-                value={watch('returnDate') ? new Date(watch('returnDate')) : undefined}
+                value={(() => {
+                  const dateValue = watch('returnDate');
+                  if (!dateValue) return undefined;
+                  const date = new Date(dateValue);
+                  return isNaN(date.getTime()) ? undefined : date;
+                })()}
                 onChange={(date) => {
-                  setValue('returnDate', date ? date.toISOString().split('T')[0] : '')
+                  if (date) {
+                    setValue('returnDate', date.toISOString().split('T')[0]);
+                  } else {
+                    setValue('returnDate', '');
+                  }
                 }}
                 placeholder="Select return date"
               />
@@ -237,7 +302,17 @@ export function CreateReturnDialog({ open, onOpenChange }: CreateReturnDialogPro
                 <div key={field.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 border rounded-lg">
                   <div className="space-y-2">
                     <Label>Product</Label>
-                    <Select onValueChange={(value) => setValue(`returnItems.${index}.productId`, value)}>
+                    <Select onValueChange={(value) => {
+                      setValue(`returnItems.${index}.productId`, value);
+                      // Auto-populate unit price from original invoice
+                      const originalPrice = getOriginalUnitPrice(value);
+                      if (originalPrice > 0) {
+                        setValue(`returnItems.${index}.unitPrice`, originalPrice);
+                        // Recalculate return amount
+                        const quantity = watch(`returnItems.${index}.returnedQuantity`) || 1;
+                        setValue(`returnItems.${index}.returnAmount`, originalPrice * quantity);
+                      }
+                    }}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select product" />
                       </SelectTrigger>

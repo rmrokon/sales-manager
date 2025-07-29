@@ -143,7 +143,11 @@ export default function InvoicesTable() {
         {
             key: 'dueAmount',
             header: 'Due Amount',
-            render: (value) => formatCurrency(value as number)
+            render: (_, invoice) => {
+                // Calculate effective due amount: total - paid
+                const effectiveDue = (invoice.totalAmount || 0) - (invoice.paidAmount || 0);
+                return formatCurrency(Math.max(0, effectiveDue));
+            }
         },
         {
             key: 'invoiceDate',

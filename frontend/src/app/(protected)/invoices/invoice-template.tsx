@@ -171,10 +171,12 @@ export default function InvoiceTemplate({ invoice, items = [], bills = [] }: Inv
             <span className="font-medium">Total:</span>
             <span className="font-bold">{formatCurrency(invoice.totalAmount)}</span>
           </div>
-          <div className="flex justify-between py-2">
-            <span className="font-medium">Paid Amount:</span>
-            <span>{formatCurrency(invoice.paidAmount)}</span>
-          </div>
+          {invoice.paidAmount > 0 && (
+            <div className="flex justify-between py-2">
+              <span className="font-medium">Down Payment:</span>
+              <span>-{formatCurrency(invoice.paidAmount)}</span>
+            </div>
+          )}
           <div className="flex justify-between py-2 border-t border-gray-300">
             <span className="font-medium">Due Amount:</span>
             <span className="font-bold">{formatCurrency(invoice.dueAmount)}</span>

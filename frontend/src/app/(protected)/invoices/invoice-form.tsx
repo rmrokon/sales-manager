@@ -296,7 +296,7 @@ export default function InvoiceForm({ defaultValues, onSuccess }: InvoiceFormPro
               id="invoiceDate"
               value={watch('invoiceDate') ? new Date(watch('invoiceDate')) : undefined}
               onChange={(date) => {
-                setValue('invoiceDate', date ? date.toISOString().split('T')[0] : '')
+                setValue('invoiceDate', date ? date.toDateString() : '')
               }}
               placeholder="Select invoice date"
             />
