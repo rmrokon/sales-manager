@@ -1,8 +1,14 @@
-import { DataTypes, Model } from '@sequelize/core';
+import { CreationOptional, DataTypes, InferAttributes, InferCreationAttributes, Model } from '@sequelize/core';
 import { sequelize } from '../../../configs';
 import User from '../users/model';
 
-export default class Credential extends Model {}
+export default class Credential extends Model<InferAttributes<Credential>, InferCreationAttributes<Credential>> {
+  declare id: CreationOptional<string>;
+  declare password: string;
+  declare createdAt: CreationOptional<Date>;
+  declare updatedAt: CreationOptional<Date>;
+  declare user_id: CreationOptional<string>;
+}
 
 Credential.init(
   {
@@ -34,6 +40,7 @@ Credential.init(
     timestamps: false,
     tableName: 'credentials',
     modelName: 'Credential',
+    paranoid: true,
     sequelize,
   },
 );
